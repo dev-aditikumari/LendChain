@@ -1,0 +1,134 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import request from "supertest";
+import { app, as, newInvoice, resetDb, seedWorld, startDb, stopDb, toApproved } from "./helpers";
+import { Disbursement, Invoice, LedgerEntry, RuleEvaluation, RuleSet, Program } from "../src/models";
+import { trialBalance } from "../src/modules/ledger/repository";
+import { evaluate } from "../src/modules/rules-engine/evaluator";
+import { hooks } from "../src/modules/disbursement/routes";
+
+let w: Awaited<ReturnType<typeof seedWorld>>;
+
+beforeAll(startDb);
+afterAll(stopDb);
+beforeEach(async () => {
+  await resetDb();
+  w = await seedWorld();
+});
+
+describe("acceptance", () => {
+  it("a supplier cannot see another supplier's invoices", async () => {
+    const id = (await newInvoice(w, "INV-1")).body._id;
+    const own = await request(app).get("/invoices").set(as(w.tokens.supplier));
+    expect(own.body.items).toHaveLength(1);
+    const other = await request(app).get("/invoices").set(as(w.tokens.supplier2));
+    expect(other.body.items).toHaveLength(0);
+    const direct = await request(app).get(`/invoices/${id}`).set(as(w.tokens.supplier2));
+    expect(direct.status).toBe(403);
+    const submit = await request(app).post(`/invoices/${id}/submit`).set(as(w.tokens.supplier2));
+    expect(submit.status).toBe(403);
+  });
+
+  it("maker-checker: recommender cannot approve, rule creator cannot publish", async () => {
+    const id = (await newInvoice(w, "INV-2")).body._id;
+    await request(app).post(`/invoices/${id}/submit`).set(as(w.tokens.supplier));
+    await request(app).post(`/invoices/${id}/confirm`).set(as(w.tokens.buyer));
+    await request(app).post(`/invoices/${id}/financing-requests`).set(as(w.tokens.supplier)).send({});
+    await Invoice.updateOne({ _id: id }, { recommendedBy: w.users.approver._id, recommendation: "APPROVE" });
+    const self = await request(app).post(`/approvals/${id}/decision`).set(as(w.tokens.approver)).send({ decision: "APPROVE", remarks: "self" });
+    expect(self.status).toBe(403);
+    expect(self.body.code).toBe("MAKER_CHECKER");
+
+    const rs = await request(app).post("/rule-sets").set(as(w.tokens.risk1)).send({ rules: [], pricing: (await RuleSet.findOne().lean())?.pricing ?? {} });
+    expect(rs.status).toBe(201);
+    const own = await request(app).post(`/rule-sets/${rs.body._id}/publish`).set(as(w.tokens.risk1));
+    expect(own.status).toBe(403);
+    const other = await request(app).post(`/rule-sets/${rs.body._id}/publish`).set(as(w.tokens.risk2));
+    expect(other.status).toBe(200);
+  });
+
+  it("same idempotency key never pays twice", async () => {
+    const { id } = await toApproved(w, "INV-3");
+    const a = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k1").send({ invoiceId: id });
+    const b = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k1").send({ invoiceId: id });
+    expect(a.status).toBe(201);
+    expect(b.status).toBe(200);
+    expect(b.body.disbursement._id).toBe(a.body.disbursement._id);
+    expect(await Disbursement.countDocuments()).toBe(1);
+    const c = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k2").send({ invoiceId: id });
+    expect(c.status).toBe(400);
+    expect(await LedgerEntry.countDocuments({ memo: "disbursement" })).toBe(4);
+  });
+
+  it("parallel requests with one key still pay once", async () => {
+    const { id } = await toApproved(w, "INV-3B");
+    const calls = await Promise.all([1, 2, 3].map(() =>
+      request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "same").send({ invoiceId: id })));
+    expect(calls.every((c) => [200, 201].includes(c.status))).toBe(true);
+    expect(await Disbursement.countDocuments()).toBe(1);
+  });
+
+  it("every ledger transaction balances", async () => {
+    const { id } = await toApproved(w, "INV-4");
+    await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k").send({ invoiceId: id });
+    const dues = await request(app).get(`/repayments/dues/${id}`).set(as(w.tokens.buyer));
+    const rep = await request(app).post("/repayments").set(as(w.tokens.buyer)).send({ invoiceId: id, amount: dues.body.principal, utr: "UTR123456" });
+    expect(rep.status).toBe(201);
+    expect(rep.body.invoiceStatus).toBe("REPAID");
+    const t = await trialBalance();
+    expect(t.debit).toBe(t.credit);
+    const txs = await LedgerEntry.aggregate([{ $group: { _id: "$txId", d: { $sum: "$debit" }, c: { $sum: "$credit" } } }]);
+    expect(txs.length).toBeGreaterThan(1);
+    for (const tx of txs) expect(tx.d).toBe(tx.c);
+    const prog = await Program.findById(w.program._id);
+    expect(prog!.outstanding).toBe(0);
+  });
+
+  it("rerunning an invoice against its stored rule version gives the same decision", async () => {
+    const { id } = await toApproved(w, "INV-5");
+    const ev: any = await RuleEvaluation.findOne({ invoiceId: id }).lean();
+    // publish a stricter version afterwards
+    const v1: any = await RuleSet.findOne({ version: ev.ruleSetVersion }).lean();
+    const strict = await request(app).post("/rule-sets").set(as(w.tokens.risk1)).send({ rules: [], pricing: v1.pricing });
+    await request(app).post(`/rule-sets/${strict.body._id}/publish`).set(as(w.tokens.risk2));
+    const again = evaluate(v1.rules, v1.pricing, ev.facts);
+    expect(again).toEqual(ev.result);
+    const sim = await request(app).post(`/rule-sets/${strict.body._id}/simulate`).set(as(w.tokens.risk1));
+    expect(sim.body.changed).toBe(1);
+  });
+
+  it("concurrent financing requests cannot exceed the program limit", async () => {
+    // limit 100000, each invoice 70000 finances 56000: only one fits
+    const ids: string[] = [];
+    for (const n of ["C1", "C2"]) {
+      const id = (await newInvoice(w, n, 70000)).body._id;
+      await request(app).post(`/invoices/${id}/submit`).set(as(w.tokens.supplier));
+      await request(app).post(`/invoices/${id}/confirm`).set(as(w.tokens.buyer));
+      ids.push(id);
+    }
+    const res = await Promise.all(ids.map((id) => request(app).post(`/invoices/${id}/financing-requests`).set(as(w.tokens.supplier)).send({})));
+    const codes = res.map((r) => r.status).sort();
+    expect(codes).toEqual([200, 409]);
+    const p = await Program.findById(w.program._id);
+    expect(p!.outstanding).toBeLessThanOrEqual(p!.sanctioned);
+    expect(p!.outstanding).toBe(56000 * 100);
+  });
+
+  it("a failure after the ledger write rolls the whole disbursement back", async () => {
+    const { id } = await toApproved(w, "INV-6");
+    hooks.afterLedger = () => { throw new Error("boom"); };
+    const r = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "rb").send({ invoiceId: id });
+    hooks.afterLedger = undefined;
+    expect(r.status).toBe(500);
+    expect(await Disbursement.countDocuments()).toBe(0);
+    expect(await LedgerEntry.countDocuments()).toBe(0);
+    expect((await Invoice.findById(id))!.status).toBe("APPROVED");
+    const retry = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "rb").send({ invoiceId: id });
+    expect(retry.status).toBe(201);
+  });
+
+  it("approver cannot disburse their own approval (segregation of duties)", async () => {
+    const { id } = await toApproved(w, "INV-7");
+    const r = await request(app).post("/disbursements").set(as(w.tokens.approver)).set("Idempotency-Key", "x").send({ invoiceId: id });
+    expect(r.status).toBe(403);
+  });
+});
