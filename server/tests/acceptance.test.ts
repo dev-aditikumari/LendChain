@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
-import { app, as, newInvoice, resetDb, seedWorld, startDb, stopDb, toApproved } from "./helpers";
+import { app, as, disburse, newInvoice, resetDb, seedWorld, startDb, stopDb, toApproved } from "./helpers";
 import { Disbursement, Invoice, LedgerEntry, RuleEvaluation, RuleSet, Program } from "../src/models";
 import { trialBalance } from "../src/modules/ledger/repository";
 import { evaluate } from "../src/modules/rules-engine/evaluator";
@@ -48,28 +48,34 @@ describe("acceptance", () => {
 
   it("same idempotency key never pays twice", async () => {
     const { id } = await toApproved(w, "INV-3");
-    const a = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k1").send({ invoiceId: id });
-    const b = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k1").send({ invoiceId: id });
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    expect(init.status).toBe(201);
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
+    const a = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "k1");
+    const b = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "k1");
     expect(a.status).toBe(201);
     expect(b.status).toBe(200);
     expect(b.body.disbursement._id).toBe(a.body.disbursement._id);
     expect(await Disbursement.countDocuments()).toBe(1);
-    const c = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k2").send({ invoiceId: id });
-    expect(c.status).toBe(400);
+    const c = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "k2");
+    expect(c.status).toBe(409);
     expect(await LedgerEntry.countDocuments({ memo: "disbursement" })).toBe(4);
   });
 
   it("parallel requests with one key still pay once", async () => {
     const { id } = await toApproved(w, "INV-3B");
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
     const calls = await Promise.all([1, 2, 3].map(() =>
-      request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "same").send({ invoiceId: id })));
+      request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "same")));
     expect(calls.every((c) => [200, 201].includes(c.status))).toBe(true);
-    expect(await Disbursement.countDocuments()).toBe(1);
+    expect(await Disbursement.countDocuments({ status: "SUCCESS" })).toBe(1);
+    expect(await LedgerEntry.countDocuments({ memo: "disbursement" })).toBe(4);
   });
 
   it("every ledger transaction balances", async () => {
     const { id } = await toApproved(w, "INV-4");
-    await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "k").send({ invoiceId: id });
+    await disburse(w, id, "k");
     const dues = await request(app).get(`/repayments/dues/${id}`).set(as(w.tokens.buyer));
     const rep = await request(app).post("/repayments").set(as(w.tokens.buyer)).send({ invoiceId: id, amount: dues.body.principal, utr: "UTR123456" });
     expect(rep.status).toBe(201);
@@ -113,22 +119,117 @@ describe("acceptance", () => {
     expect(p!.outstanding).toBe(56000 * 100);
   });
 
-  it("a failure after the ledger write rolls the whole disbursement back", async () => {
+  it("a failure after the ledger write rolls the authorisation back", async () => {
     const { id } = await toApproved(w, "INV-6");
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
     hooks.afterLedger = () => { throw new Error("boom"); };
-    const r = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "rb").send({ invoiceId: id });
+    const r = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "rb");
     hooks.afterLedger = undefined;
     expect(r.status).toBe(500);
-    expect(await Disbursement.countDocuments()).toBe(0);
+    expect((await Disbursement.findById(init.body.disbursement._id))!.status).toBe("PENDING_AUTH");
     expect(await LedgerEntry.countDocuments()).toBe(0);
     expect((await Invoice.findById(id))!.status).toBe("APPROVED");
-    const retry = await request(app).post("/disbursements").set(as(w.tokens.ops)).set("Idempotency-Key", "rb").send({ invoiceId: id });
+    const retry = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "rb");
     expect(retry.status).toBe(201);
   });
 
-  it("approver cannot disburse their own approval (segregation of duties)", async () => {
+  it("approver cannot initiate a payout for their own approval (segregation of duties)", async () => {
     const { id } = await toApproved(w, "INV-7");
-    const r = await request(app).post("/disbursements").set(as(w.tokens.approver)).set("Idempotency-Key", "x").send({ invoiceId: id });
+    const r = await request(app).post("/disbursements").set(as(w.tokens.approver)).send({ invoiceId: id });
     expect(r.status).toBe(403);
+  });
+
+  it("whoever initiates a payout cannot authorise it", async () => {
+    const { id } = await toApproved(w, "INV-8");
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
+    const self = await request(app).post(url).set(as(w.tokens.finance)).set("Idempotency-Key", "self");
+    expect(self.status).toBe(403);
+    expect(self.body.code ?? self.body.reason ?? JSON.stringify(self.body)).toContain("DUAL_CONTROL");
+    expect((await Invoice.findById(id))!.status).toBe("APPROVED");
+    const other = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "other");
+    expect(other.status).toBe(201);
+  });
+
+  it("operations and accounts cannot move money", async () => {
+    const { id } = await toApproved(w, "INV-9");
+    for (const t of [w.tokens.ops, w.tokens.accounts]) {
+      const r = await request(app).post("/disbursements").set(as(t)).send({ invoiceId: id });
+      expect(r.status).toBe(403);
+    }
+  });
+
+  it("two finance users authorising at once release the payout once", async () => {
+    const { id } = await toApproved(w, "INV-10");
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
+    const calls = await Promise.all([
+      request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "a"),
+      request(app).post(url).set(as(w.tokens.finance3)).set("Idempotency-Key", "b"),
+    ]);
+    expect(calls.map((c) => c.status).sort()).toEqual([201, 409]);
+    const loser = calls.find((c) => c.status === 409)!;
+    expect(loser.body.code).toBe("ALREADY_AUTHORISED");
+    expect(await LedgerEntry.countDocuments({ memo: "disbursement" })).toBe(4);
+    expect(await Disbursement.countDocuments({ status: "SUCCESS" })).toBe(1);
+    expect((await Invoice.findById(id))!.status).toBe("DISBURSED");
+  });
+
+  it("queuing the same invoice twice never makes two payouts", async () => {
+    const { id } = await toApproved(w, "INV-11");
+    const send = (extra: Record<string, string> = {}) =>
+      request(app).post("/disbursements").set(as(w.tokens.finance)).set(extra).send({ invoiceId: id });
+    const first = await send();
+    expect(first.status).toBe(201);
+    expect((await send()).status).toBe(409);
+    expect((await send({ "Idempotency-Key": "same" })).status).toBe(409);
+    expect((await send({ "Idempotency-Key": "same" })).status).toBe(409);
+
+    const { id: id2 } = await toApproved(w, "INV-12");
+    const race = await Promise.all([1, 2, 3, 4].map(() =>
+      request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id2 })));
+    expect(race.map((r) => r.status).sort()).toEqual([201, 409, 409, 409]);
+    expect(await Disbursement.countDocuments({ invoiceId: id2 })).toBe(1);
+  });
+
+  it("replaying a released payout with the same key returns the original result", async () => {
+    const { id } = await toApproved(w, "INV-13");
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
+    const first = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "keep");
+    const replay = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "keep");
+    expect(first.status).toBe(201);
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual(first.body);
+
+    // someone else, with their own key, is told it is already done
+    const other = await request(app).post(url).set(as(w.tokens.finance3)).set("Idempotency-Key", "theirs");
+    expect(other.status).toBe(409);
+    expect(other.body.code).toBe("ALREADY_AUTHORISED");
+
+    // someone else reusing the first caller's key does not get that caller's response
+    const stolen = await request(app).post(url).set(as(w.tokens.finance3)).set("Idempotency-Key", "keep");
+    expect(stolen.status).toBe(409);
+    expect(stolen.body.code).toBe("IDEMPOTENCY_KEY_REUSED");
+    expect(await LedgerEntry.countDocuments({ memo: "disbursement" })).toBe(4);
+  });
+
+  it("a failed payout can be queued again, a live one cannot", async () => {
+    const { id } = await toApproved(w, "INV-14");
+    const first = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    expect((await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id })).status).toBe(409);
+    await Disbursement.updateOne({ _id: first.body.disbursement._id }, { $set: { status: "FAILED" } });
+    const again = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    expect(again.status).toBe(201);
+    expect(again.body.disbursement._id).not.toBe(first.body.disbursement._id);
+    expect((await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id })).status).toBe(409);
+    expect(await Disbursement.countDocuments({ invoiceId: id })).toBe(2);
+  });
+
+  it("login returns the permission list for the role", async () => {
+    const r = await request(app).post("/auth/login").send({ email: "accounts@t.com", password: "Passw0rd!x" });
+    expect(r.body.permissions).toEqual(expect.arrayContaining(["journal:post", "period:close"]));
+    expect(r.body.permissions).not.toContain("disbursement:authorise");
   });
 });

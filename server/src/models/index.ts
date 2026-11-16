@@ -86,17 +86,24 @@ export const RuleEvaluation = mongoose.model("RuleEvaluation", new Schema({
   result: Schema.Types.Mixed,
 }, opts));
 
-export const Disbursement = mongoose.model("Disbursement", new Schema({
-  invoiceId: { type: Schema.Types.ObjectId, unique: true },
+const disbursementSchema = new Schema({
+  invoiceId: { type: Schema.Types.ObjectId, required: true },
   amount: Number,
   fee: Number,
   upfrontInterest: Number,
   net: Number,
   rate: Number,
-  status: { type: String, enum: ["PENDING", "SUCCESS", "FAILED"], default: "PENDING" },
+  status: { type: String, enum: ["PENDING_AUTH", "SUCCESS", "FAILED"], default: "PENDING_AUTH" },
   reference: String,
-  executedBy: { type: Schema.Types.ObjectId, ref: "User" },
-}, opts));
+  initiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  authorisedBy: { type: Schema.Types.ObjectId, ref: "User" },
+}, opts);
+// one live payout per invoice; a failed one can be queued again
+disbursementSchema.index(
+  { invoiceId: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: ["PENDING_AUTH", "SUCCESS"] } } },
+);
+export const Disbursement = mongoose.model("Disbursement", disbursementSchema);
 
 export const LedgerEntry = mongoose.model("LedgerEntry", new Schema({
   txId: { type: String, required: true, index: true },
@@ -117,6 +124,7 @@ export const Repayment = mongoose.model("Repayment", new Schema({
 
 export const IdempotencyKey = mongoose.model("IdempotencyKey", new Schema({
   key: { type: String, required: true, unique: true },
+  scope: String,
   response: Schema.Types.Mixed,
 }, opts));
 

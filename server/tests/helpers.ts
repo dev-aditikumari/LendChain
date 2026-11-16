@@ -42,7 +42,11 @@ export async function seedWorld(sanctioned = 100000 * 100) {
     buyer: await mk("buyer@t.com", "BUYER", { entityId: buyer._id }),
     analyst: await mk("analyst@t.com", "ANALYST"),
     approver: await mk("approver@t.com", "APPROVER", { approvalLimit: 500000 * 100 }),
-    ops: await mk("ops@t.com", "FINANCE_OPS"),
+    finance: await mk("finance@t.com", "FINANCE_OPS"),
+    finance2: await mk("finance2@t.com", "FINANCE_OPS"),
+    finance3: await mk("finance3@t.com", "FINANCE_OPS"),
+    ops: await mk("ops@t.com", "OPERATIONS"),
+    accounts: await mk("accounts@t.com", "ACCOUNTS"),
     risk1: await mk("risk1@t.com", "RISK_ADMIN"),
     risk2: await mk("risk2@t.com", "RISK_ADMIN"),
     admin: await mk("admin@t.com", "ADMIN"),
@@ -73,4 +77,12 @@ export async function toApproved(w: Awaited<ReturnType<typeof seedWorld>>, numbe
   await request(app).post(`/approvals/${id}/recommend`).set(as(w.tokens.analyst)).send({ recommendation: "APPROVE", notes: "looks fine" });
   const dec = await request(app).post(`/approvals/${id}/decision`).set(as(w.tokens.approver)).send({ decision: "APPROVE", remarks: "approved" });
   return { id, fin, dec };
+}
+
+// finance initiates, a second finance user authorises
+export async function disburse(w: Awaited<ReturnType<typeof seedWorld>>, invoiceId: string, key: string) {
+  const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId });
+  const authorise = await request(app).post(`/disbursements/${init.body.disbursement?._id}/authorise`)
+    .set(as(w.tokens.finance2)).set("Idempotency-Key", key);
+  return { init, authorise };
 }
