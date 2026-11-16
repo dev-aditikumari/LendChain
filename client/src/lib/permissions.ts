@@ -21,74 +21,18 @@ export const ROLE_SHORT: Record<Role, string> = {
   ops: 'Ops', accounts: 'Acc', collections: 'Col', risk: 'Rsk', admin: 'Adm',
 }
 
-// roles that sign in with a second step
-export const INTERNAL_ROLES: Role[] = ROLES.filter((r) => r !== 'supplier' && r !== 'buyer')
-
-// ● full, ○ view only, – none
+// full, view only, none
 export type Level = 'full' | 'view' | 'none'
-
-const L: Record<string, Level> = { '●': 'full', '○': 'view', '–': 'none' }
-
-function parse(rows: Record<string, string>): Record<string, Record<Role, Level>> {
-  const out: Record<string, Record<Role, Level>> = {}
-  for (const [name, cells] of Object.entries(rows)) {
-    const marks = cells.replace(/\s/g, '').split('')
-    out[name] = Object.fromEntries(ROLES.map((r, i) => [r, L[marks[i]]])) as Record<Role, Level>
-  }
-  return out
-}
-
-export const ACTIONS = parse({
-  'Create invoice': '●–––––––––',
-  'Confirm / dispute': '–●––––––––',
-  'Recommend decision': '––●–––––––',
-  'Approve within limit': '–––●––––––',
-  'Execute disbursement': '––––●–––––',
-  'Resolve exceptions': '–––––●––––',
-  'Post journals / close': '––––––●–––',
-  'Record repayment': '–●––●–––––',
-  'Follow up overdue': '–––––––●––',
-  'Publish rule set': '––––––––●●',
-  'Manage users and roles': '–––––––––●',
-  'View audit log': '–––○○○–○○●',
-})
-
-export const SECTIONS = parse({
-  'Dashboard': '●●●●●●●●●●',
-  'Invoices': '●●○–○○––○○',
-  'Financing': '●○–––○––○–',
-  'Approvals': '––○●●○–––○',
-  'Disbursement': '–––○●●○––○',
-  'Ledger': '–––○●●●○–○',
-  'Reconciliation': '–––○●●○––○',
-  'Exceptions': '–––○–●–––○',
-  'Trial balance / close': '–––––○●––○',
-  'Collections': '○○––○––●–○',
-  'Rule engine': '––○○––––●●',
-  'Audit log': '–––○○○–○○●',
-  'Users and roles': '–––––––––●',
-})
-
-export type Section = keyof typeof SECTIONS
-export type Action = keyof typeof ACTIONS
-
-export function sectionLevel(role: Role, section: string): Level {
-  return SECTIONS[section]?.[role] ?? 'none'
-}
-
-export function actionLevel(role: Role, action: string): Level {
-  return ACTIONS[action]?.[role] ?? 'none'
-}
 
 export interface NavItem {
   label: string
   to: string
-  section: Section
+  section: string
 }
 
-const n = (label: string, to: string, section: Section): NavItem => ({ label, to, section })
+const n = (label: string, to: string, section: string): NavItem => ({ label, to, section })
 
-// menu per role, each entry gated by the section visibility matrix
+// menu per role; an entry shows only when the user's permissions give access to its section
 export const NAV: Record<Role, NavItem[]> = {
   supplier: [
     n('Dashboard', '/dashboard', 'Dashboard'),
@@ -153,8 +97,8 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
 }
 
-export function navFor(role: Role): NavItem[] {
-  return NAV[role].filter((i) => sectionLevel(role, i.section) !== 'none')
+export function navFor(role: Role, levelOf: (section: string) => Level): NavItem[] {
+  return NAV[role].filter((i) => levelOf(i.section) !== 'none')
 }
 
 export const HOME: Record<Role, string> = {

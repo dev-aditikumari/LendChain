@@ -26,7 +26,7 @@ The client expects the API at `http://localhost:5000` (override with `VITE_API_U
 
 ## Client
 
-React 19, Vite, TypeScript and Tailwind. Run it with:
+React 19, Vite, TypeScript and Tailwind. Start the server first, then:
 
 ```
 cd client
@@ -34,9 +34,11 @@ npm install
 npm run dev
 ```
 
-All 26 screens run on sample data in `src/data/sample.ts`. The API at `http://localhost:5000` is not built yet, so sign-in goes through a mock in `src/api/client.ts`.
+The dev server forwards `/api/*` to the API at `http://localhost:5000`. Set `API_TARGET` to point the proxy somewhere else, or `VITE_API_URL` to call an API directly.
 
-Demo logins (password `Demo@1234`; internal roles also need the 2-step code `123456`). The password and code are demo-only and live in the mock login.
+Sign-in uses the real API. Most screens still show sample data from `src/data/sample.ts`; Users and roles, Access map and Audit log read from the server.
+
+Demo logins (password `Demo@1234`). The server has no second sign-in step yet.
 
 | Role | Email |
 |---|---|
@@ -51,7 +53,7 @@ Demo logins (password `Demo@1234`; internal roles also need the 2-step code `123
 | Risk Admin | `risk1@lendchain.test` |
 | Admin | `admin@lendchain.test` |
 
-Menus, routes and buttons follow `src/lib/permissions.ts`. These checks only change what the UI shows. They are not security: the server must enforce every permission and every maker-checker rule itself, whatever the client hides.
+Menus, routes and buttons follow the permission list the server returns at login. `src/lib/access.ts` holds the one small mapping from permission keys to the sections a role sees in full or read-only. These checks only change what the UI shows. They are not security: the server must enforce every permission and every maker-checker rule itself, whatever the client hides.
 
 These menu items open a "coming soon" page because they have no design yet: Repayments, Payables, KYC checks, Decisions, Approved, Rejected, Limits, Payout monitor, Master data, Settlements, Tax & GST, Follow-ups, Overdue and Settings.
 

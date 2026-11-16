@@ -8,8 +8,8 @@ import { useAuth } from '../auth/AuthContext'
 import { inr, inrShort } from '../lib/format'
 
 export default function Ageing() {
-  const { action } = useAuth()
-  const canFollow = action('Follow up overdue') === 'full'
+  const { can } = useAuth()
+  const canFollow = can('collections:read')
   const sum = (b: string) => OVERDUE.filter((r) => r.bucket === b).reduce((s, r) => s + Number(r.amount), 0)
   return (
     <>

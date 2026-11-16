@@ -14,10 +14,10 @@ import { useAuth } from '../auth/AuthContext'
 const STEPS = ['Accruals', 'Reconcile', 'Review', 'Sign-off', 'Lock']
 
 export default function PeriodClose() {
-  const { action } = useAuth()
+  const { can } = useAuth()
   const [locked, setLocked] = useState(false)
   const pending = CLOSE_CHECKS.filter((c) => c.status !== 'Done').length
-  const canClose = action('Post journals / close') === 'full'
+  const canClose = can('period:close')
   return (
     <>
       <PageHeader title="Period close" subtitle="October is closed. November is in progress." actions={canClose && <Button disabled={pending > 0 || locked} onClick={() => setLocked(true)}>Request close</Button>} />

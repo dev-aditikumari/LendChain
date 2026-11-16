@@ -9,13 +9,13 @@ import StatusPill from '../components/StatusPill'
 import { BACKTEST, RULES, RULE_JSON } from '../data/sample'
 import { useAuth } from '../auth/AuthContext'
 
-const AUTHOR = 'Pooja Bansal'
+const AUTHOR = 'risk1'
 
 export default function RuleEditor() {
-  const { user, action } = useAuth()
+  const { user, can } = useAuth()
   const [published, setPublished] = useState(false)
   const isAuthor = user?.name === AUTHOR
-  const canPublish = action('Publish rule set') === 'full' && !isAuthor
+  const canPublish = can('rule:publish') && !isAuthor
   return (
     <>
       <PageHeader

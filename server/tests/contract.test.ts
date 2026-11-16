@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { ROLES, rolePermissions } from "../src/modules/rbac/permissions";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+
+// the client file is plain text here so the server build does not depend on client sources
+const clientRoles = readFileSync(fileURLToPath(new URL("../../client/src/lib/serverRoles.ts", import.meta.url)), "utf8");
+const listed = [...clientRoles.match(/SERVER_ROLES = \[([\s\S]*?)\]/)![1].matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]);
+const keyMap = Object.fromEntries([...clientRoles.match(/ROLE_KEY = \{([\s\S]*?)\}/)![1].matchAll(/([A-Z_]+): '([a-z]+)'/g)].map((m) => [m[1], m[2]]));
 
 // The client builds its menus and buttons from these names. Changing a role or a
 // permission key here should be a deliberate edit to this file and to the client.
@@ -26,5 +33,10 @@ describe("access contract", () => {
   });
   it("gives each role exactly the agreed permission keys", () => {
     for (const role of ROLES) expect([...rolePermissions[role]].sort()).toEqual(CONTRACT[role]);
+  });
+  it("matches the role list the client uses", () => {
+    expect([...listed].sort()).toEqual([...ROLES].sort());
+    expect(Object.keys(keyMap).sort()).toEqual([...ROLES].sort());
+    expect(new Set(Object.values(keyMap)).size).toBe(ROLES.length);
   });
 });

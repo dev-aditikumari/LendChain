@@ -1,45 +1,6 @@
-import type { Role } from '../lib/permissions'
 import type { PillKind } from '../components/StatusPill'
 
 export type Row = Record<string, string | number>
-
-export interface DemoUser {
-  email: string
-  name: string
-  role: Role
-  company: string
-}
-
-const d = (email: string, name: string, role: Role, company: string): DemoUser => ({
-  email: `${email}@lendchain.test`, name, role, company,
-})
-
-export const DEMO_USERS: DemoUser[] = [
-  d('supplier', 'Meera Iyer', 'supplier', 'Kaveri Components'),
-  d('buyer', 'Rohan Desai', 'buyer', 'Tata Auto Parts Ltd'),
-  d('analyst', 'Kavya Nair', 'analyst', 'LendChain'),
-  d('approver', 'Arjun Menon', 'approver', 'LendChain'),
-  d('ops', 'Sana Qureshi', 'ops', 'LendChain'),
-  d('collections', 'Vikram Rao', 'collections', 'LendChain'),
-  d('risk1', 'Pooja Bansal', 'risk', 'LendChain'),
-  d('risk2', 'Dev Malhotra', 'risk', 'LendChain'),
-  d('admin', 'Ishita Verma', 'admin', 'LendChain'),
-  d('finance', 'Nikhil Joshi', 'finance', 'LendChain'),
-  d('accounts', 'Farah Sheikh', 'accounts', 'LendChain'),
-]
-
-export const ROLE_PREVIEW: Record<Role, string> = {
-  supplier: 'supplier@lendchain.test',
-  buyer: 'buyer@lendchain.test',
-  analyst: 'analyst@lendchain.test',
-  approver: 'approver@lendchain.test',
-  finance: 'finance@lendchain.test',
-  ops: 'ops@lendchain.test',
-  accounts: 'accounts@lendchain.test',
-  collections: 'collections@lendchain.test',
-  risk: 'risk1@lendchain.test',
-  admin: 'admin@lendchain.test',
-}
 
 export const INVOICE_STATES = [
   'Draft', 'Submitted', 'Buyer confirmed', 'Financing requested', 'Engine evaluated', 'Approved', 'Disbursed',
@@ -119,10 +80,10 @@ export const ENGINE_TRACE: Row[] = [
 ]
 
 export const DISBURSEMENTS: Row[] = [
-  { id: 'DSB-5521', invoice: 'INV-2038', payee: 'Kaveri Components', amount: 828000, initiatedBy: 'Nikhil Joshi', authorisedBy: '-', status: 'Pending' },
-  { id: 'DSB-5519', invoice: 'INV-2031', payee: 'Kaveri Components', amount: 576000, initiatedBy: 'Sana Qureshi', authorisedBy: 'Nikhil Joshi', status: 'Disbursed' },
-  { id: 'DSB-5517', invoice: 'INV-2024', payee: 'Sunrise Plastics', amount: 412000, initiatedBy: 'Sana Qureshi', authorisedBy: '-', status: 'Pending' },
-  { id: 'DSB-5512', invoice: 'INV-2011', payee: 'Lotus Textiles', amount: 1260000, initiatedBy: 'Nikhil Joshi', authorisedBy: 'Sana Qureshi', status: 'Failed' },
+  { id: 'DSB-5521', invoice: 'INV-2038', payee: 'Kaveri Components', amount: 828000, initiatedBy: 'finance', authorisedBy: '-', status: 'Pending' },
+  { id: 'DSB-5519', invoice: 'INV-2031', payee: 'Kaveri Components', amount: 576000, initiatedBy: 'finance2', authorisedBy: 'finance', status: 'Disbursed' },
+  { id: 'DSB-5517', invoice: 'INV-2024', payee: 'Sunrise Plastics', amount: 412000, initiatedBy: 'finance2', authorisedBy: '-', status: 'Pending' },
+  { id: 'DSB-5512', invoice: 'INV-2011', payee: 'Lotus Textiles', amount: 1260000, initiatedBy: 'finance', authorisedBy: 'finance2', status: 'Failed' },
 ]
 
 export const LEDGER: Row[] = [

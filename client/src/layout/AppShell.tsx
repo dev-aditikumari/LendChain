@@ -4,9 +4,9 @@ import Logo from '../components/Logo'
 import { ROLE_LABEL, navFor } from '../lib/permissions'
 
 export default function AppShell() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, section } = useAuth()
   if (!user) return null
-  const items = navFor(user.role)
+  const items = navFor(user.role, section)
   const role = ROLE_LABEL[user.role]
 
   return (

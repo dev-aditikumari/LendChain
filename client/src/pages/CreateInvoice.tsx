@@ -18,7 +18,7 @@ function daysBetween(a: string, b: string) {
 }
 
 export default function CreateInvoice() {
-  const { action } = useAuth()
+  const { can } = useAuth()
   const [buyer, setBuyer] = useState('Tata Auto Parts Ltd')
   const [number, setNumber] = useState('INV-2052')
   const [amount, setAmount] = useState('1850000')
@@ -36,7 +36,7 @@ export default function CreateInvoice() {
     { name: 'Invoice PDF attached', ok: pdf !== '' },
   ]
   const allOk = checks.every((c) => c.ok)
-  const canCreate = action('Create invoice') === 'full'
+  const canCreate = can('invoice:create')
 
   return (
     <>
