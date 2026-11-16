@@ -33,7 +33,8 @@ import UsersRoles from './pages/UsersRoles'
 
 // the screen shows only when the signed-in role can see the section
 function Guard({ section, children }: { section: string; children: ReactElement }) {
-  const { user, section: level } = useAuth()
+  const { user, ready, section: level } = useAuth()
+  if (!ready) return null
   if (!user) return <Navigate to="/login" replace />
   if (level(section) === 'none') return <Navigate to={HOME[user.role]} replace />
   return children
@@ -42,7 +43,8 @@ function Guard({ section, children }: { section: string; children: ReactElement 
 const g = (section: string, el: ReactElement) => <Guard section={section}>{el}</Guard>
 
 export default function App() {
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
+  if (!ready) return <p className="p-8 text-muted">Loading...</p>
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

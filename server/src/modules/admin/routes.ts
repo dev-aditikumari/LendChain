@@ -8,6 +8,7 @@ import { evaluate } from "../rules-engine/evaluator";
 import { entries, trialBalance } from "../ledger/repository";
 import { ageing } from "../repayments/overdue";
 import { audit } from "../../shared/audit";
+import { rolePermissions } from "../rbac/permissions";
 
 export const adminRouter = Router();
 adminRouter.use(authenticate);
@@ -130,10 +131,15 @@ adminRouter.get("/ledger/entries", async (req, res) => {
 
 adminRouter.get("/audit-logs", async (req, res) => {
   check(req, "audit:read", {});
-  res.json(await AuditLog.find().sort({ createdAt: -1 }).limit(200).lean());
+  res.json(await AuditLog.find().sort({ createdAt: -1 }).limit(200).populate("actor", "name").lean());
 });
 
 adminRouter.get("/collections/ageing", async (req, res) => {
   check(req, "collections:read", {});
   res.json(await ageing());
+});
+
+adminRouter.get("/access/roles", async (req, res) => {
+  check(req, "user:manage", {});
+  res.json(rolePermissions);
 });

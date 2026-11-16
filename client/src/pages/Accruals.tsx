@@ -10,8 +10,8 @@ import { useAuth } from '../auth/AuthContext'
 import { inr } from '../lib/format'
 
 export default function Accruals() {
-  const { action } = useAuth()
-  const canPost = action('Post journals / close') === 'full'
+  const { can } = useAuth()
+  const canPost = can('journal:post')
   return (
     <>
       <PageHeader title="Accruals" subtitle="Monthly discount accrual runs." />

@@ -227,6 +227,13 @@ describe("acceptance", () => {
     expect(await Disbursement.countDocuments({ invoiceId: id })).toBe(2);
   });
 
+  it("only admins can read the role table", async () => {
+    expect((await request(app).get("/access/roles").set(as(w.tokens.supplier))).status).toBe(403);
+    const r = await request(app).get("/access/roles").set(as(w.tokens.admin));
+    expect(r.status).toBe(200);
+    expect(r.body.ACCOUNTS).toContain("period:close");
+  });
+
   it("login returns the permission list for the role", async () => {
     const r = await request(app).post("/auth/login").send({ email: "accounts@t.com", password: "Passw0rd!x" });
     expect(r.body.permissions).toEqual(expect.arrayContaining(["journal:post", "period:close"]));

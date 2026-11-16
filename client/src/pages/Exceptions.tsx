@@ -8,9 +8,9 @@ import { EXCEPTIONS, type Row } from '../data/sample'
 import { useAuth } from '../auth/AuthContext'
 
 export default function Exceptions() {
-  const { user, action } = useAuth()
+  const { user, can } = useAuth()
   const [rows, setRows] = useState<Row[]>(EXCEPTIONS)
-  const canResolve = action('Resolve exceptions') === 'full'
+  const canResolve = can('exception:resolve')
   const assign = (id: string) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, owner: user?.name ?? '' } : r)))
 
   return (

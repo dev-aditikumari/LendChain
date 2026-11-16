@@ -14,16 +14,16 @@ import { inr } from '../lib/format'
 
 const AMOUNT = 2400000
 const APPROVER_LIMIT = 2500000
-const RECOMMENDED_BY = 'Kavya Nair'
+const RECOMMENDED_BY = 'analyst'
 
 export default function ApproverReview() {
-  const { user, action } = useAuth()
+  const { user, can } = useAuth()
   const [remarks, setRemarks] = useState('')
   const [outcome, setOutcome] = useState<'approved' | 'rejected' | null>(null)
 
   const isMaker = user?.name === RECOMMENDED_BY
   const overLimit = AMOUNT > APPROVER_LIMIT
-  const canDecide = action('Approve within limit') === 'full' && !isMaker && !overLimit
+  const canDecide = can('invoice:approve') && !isMaker && !overLimit
   const needRemarks = remarks.trim() === ''
 
   return (

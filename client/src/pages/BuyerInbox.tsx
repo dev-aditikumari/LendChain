@@ -9,9 +9,9 @@ import { useAuth } from '../auth/AuthContext'
 import { inr } from '../lib/format'
 
 export default function BuyerInbox() {
-  const { action } = useAuth()
+  const { can } = useAuth()
   const [rows, setRows] = useState<Row[]>(BUYER_INBOX)
-  const canAct = action('Confirm / dispute') === 'full'
+  const canAct = can('invoice:confirm')
   const set = (id: string, status: string) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, status } : r)))
 
   const waiting = rows.filter((r) => r.status === 'Awaiting you')

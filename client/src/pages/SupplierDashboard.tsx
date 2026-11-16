@@ -9,13 +9,13 @@ import { useAuth } from '../auth/AuthContext'
 import { inr } from '../lib/format'
 
 export default function SupplierDashboard() {
-  const { action } = useAuth()
+  const { can } = useAuth()
   return (
     <>
       <PageHeader
         title="Dashboard"
         subtitle="Your limit, financed invoices and what is due this week."
-        actions={action('Create invoice') === 'full' && <Link to="/invoices/new"><Button>Create invoice</Button></Link>}
+        actions={can('invoice:create') && <Link to="/invoices/new"><Button>Create invoice</Button></Link>}
       />
       <KpiRow
         items={[

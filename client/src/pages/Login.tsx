@@ -4,8 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 import Button from '../components/Button'
 import { Field } from '../components/Field'
 import Logo from '../components/Logo'
-import { ROLE_PREVIEW } from '../data/sample'
-import { HOME, INTERNAL_ROLES, ROLES, ROLE_LABEL } from '../lib/permissions'
+import { messageFor } from '../api/http'
+import { HOME, ROLES, ROLE_LABEL, type Role } from '../lib/permissions'
 
 const STATS = [
   { value: '₹84 Cr', label: 'financed this year' },
@@ -13,11 +13,24 @@ const STATS = [
   { value: '0.4%', label: 'overdue rate' },
 ]
 
+// demo accounts from the seed data, used to fill the email field
+const DEMO_EMAIL: Record<Role, string> = {
+  supplier: 'supplier@lendchain.test',
+  buyer: 'buyer@lendchain.test',
+  analyst: 'analyst@lendchain.test',
+  approver: 'approver@lendchain.test',
+  finance: 'finance@lendchain.test',
+  ops: 'ops@lendchain.test',
+  accounts: 'accounts@lendchain.test',
+  collections: 'collections@lendchain.test',
+  risk: 'risk1@lendchain.test',
+  admin: 'admin@lendchain.test',
+}
+
 export default function Login() {
   const { user, signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -28,9 +41,9 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      await signIn({ email, password, code })
+      await signIn(email.trim(), password)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not sign in.')
+      setError(messageFor(err))
     } finally {
       setBusy(false)
     }
@@ -67,7 +80,7 @@ export default function Login() {
               <button
                 key={r}
                 type="button"
-                onClick={() => setEmail(ROLE_PREVIEW[r])}
+                onClick={() => setEmail(DEMO_EMAIL[r])}
                 className="min-h-11 cursor-pointer rounded-full border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
               >
                 {ROLE_LABEL[r]}
@@ -85,18 +98,9 @@ export default function Login() {
           </div>
           <Field label="Email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <Field label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Field
-            label="2-step code"
-            inputMode="numeric"
-            maxLength={6}
-            autoComplete="one-time-code"
-            hint={`Required for internal roles (${INTERNAL_ROLES.map((r) => ROLE_LABEL[r]).join(', ')}).`}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
           {error && <p role="alert" className="m-0 rounded-[10px] bg-[#FDE2E2] px-3 py-2 text-sm font-semibold text-[#8A1C1C]">{error}</p>}
           <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</Button>
-          <p className="m-0 text-xs text-muted">Demo password is Demo@1234 and the demo code is 123456.</p>
+          <p className="m-0 text-xs text-muted">Demo accounts use the password Demo@1234.</p>
         </form>
       </section>
     </div>

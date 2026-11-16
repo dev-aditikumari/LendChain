@@ -1,51 +1,86 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { login as apiLogin, type LoginInput } from '../api/client'
-import type { DemoUser } from '../data/sample'
-import { actionLevel, sectionLevel, type Level } from '../lib/permissions'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { http, setUnauthorizedHandler, tokenStore } from '../api/http'
+import { sectionLevel } from '../lib/access'
+import type { Level, Role } from '../lib/permissions'
+import { ROLE_KEY, type ServerRole } from '../lib/serverRoles'
+
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  role: Role
+  entityId?: string
+  permissions: string[]
+}
+
+interface ApiUser {
+  _id?: string
+  id?: string
+  name: string
+  email: string
+  role: ServerRole
+  entityId?: string
+}
 
 interface AuthValue {
-  user: DemoUser | null
-  signIn: (input: LoginInput) => Promise<void>
+  user: AuthUser | null
+  ready: boolean
+  signIn: (email: string, password: string) => Promise<void>
   signOut: () => void
-  action: (name: string) => Level
+  can: (permission: string) => boolean
   section: (name: string) => Level
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
-const KEY = 'lendchain.user'
 
-function load(): DemoUser | null {
-  try {
-    const raw = sessionStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as DemoUser) : null
-  } catch {
-    return null
-  }
+function toUser(u: ApiUser, permissions: string[]): AuthUser {
+  const role = ROLE_KEY[u.role]
+  if (!role) throw new Error(`Unknown role ${u.role}`)
+  return { id: String(u._id ?? u.id), name: u.name, email: u.email, role, entityId: u.entityId, permissions }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<DemoUser | null>(load)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [ready, setReady] = useState(() => tokenStore.get() === null)
 
-  const signIn = useCallback(async (input: LoginInput) => {
-    const u = await apiLogin(input)
-    try { sessionStorage.setItem(KEY, JSON.stringify(u)) } catch { /* storage unavailable */ }
-    setUser(u)
+  const drop = useCallback(() => {
+    tokenStore.clear()
+    setUser(null)
+  }, [])
+
+  useEffect(() => {
+    setUnauthorizedHandler(drop)
+    if (tokenStore.get() === null) return
+    // restore the session and permissions after a reload
+    http<ApiUser & { permissions: string[] }>('/auth/me')
+      .then((me) => setUser(toUser(me, me.permissions)))
+      .catch(drop)
+      .finally(() => setReady(true))
+  }, [drop])
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const r = await http<{ token: string; user: ApiUser; permissions: string[] }>('/auth/login', {
+      body: { email, password },
+    })
+    tokenStore.set(r.token)
+    setUser(toUser(r.user, r.permissions))
   }, [])
 
   const signOut = useCallback(() => {
-    try { sessionStorage.removeItem(KEY) } catch { /* storage unavailable */ }
-    setUser(null)
-  }, [])
+    http('/auth/logout', { method: 'POST', body: {} }).catch(() => {})
+    drop()
+  }, [drop])
 
   const value = useMemo<AuthValue>(
     () => ({
       user,
+      ready,
       signIn,
       signOut,
-      action: (name) => (user ? actionLevel(user.role, name) : 'none'),
-      section: (name) => (user ? sectionLevel(user.role, name) : 'none'),
+      can: (permission) => !!user?.permissions.includes(permission),
+      section: (name) => (user ? sectionLevel(user.permissions, name) : 'none'),
     }),
-    [user, signIn, signOut],
+    [user, ready, signIn, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

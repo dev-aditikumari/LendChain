@@ -9,9 +9,9 @@ import { useAuth } from '../auth/AuthContext'
 import { inr } from '../lib/format'
 
 export default function Disbursements() {
-  const { user, action } = useAuth()
+  const { user, can } = useAuth()
   const [rows, setRows] = useState<Row[]>(DISBURSEMENTS)
-  const canExecute = action('Execute disbursement') === 'full'
+  const canExecute = can('disbursement:authorise')
 
   const update = (id: string, patch: Row) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
