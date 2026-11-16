@@ -10,7 +10,7 @@ const riskAdmin: Actor = { id: "u5", role: "RISK_ADMIN" };
 describe("policy", () => {
   it("blocks permissions the role does not have", () => {
     expect(can(supplier, "invoice:approve")).toEqual({ ok: false, reason: "ROLE_NOT_ALLOWED" });
-    expect(can(approver, "disbursement:execute")).toMatchObject({ ok: false });
+    expect(can(approver, "disbursement:authorise")).toMatchObject({ ok: false });
   });
   it("scopes suppliers and buyers to their own invoices", () => {
     expect(can(supplier, "invoice:read", { supplierId: "s1" }).ok).toBe(true);
@@ -27,8 +27,12 @@ describe("policy", () => {
     expect(can(approver, "invoice:approve", { amount: 600000 * 100 })).toEqual({ ok: false, reason: "ABOVE_APPROVAL_LIMIT" });
   });
   it("approver cannot disburse their own approval", () => {
-    expect(can(ops, "disbursement:execute", { approvedBy: "u4" })).toEqual({ ok: false, reason: "SEGREGATION_OF_DUTIES" });
-    expect(can(ops, "disbursement:execute", { approvedBy: "u3" }).ok).toBe(true);
+    expect(can(ops, "disbursement:initiate", { approvedBy: "u4" })).toEqual({ ok: false, reason: "SEGREGATION_OF_DUTIES" });
+    expect(can(ops, "disbursement:authorise", { approvedBy: "u4", initiatedBy: "u9" })).toEqual({ ok: false, reason: "SEGREGATION_OF_DUTIES" });
+    expect(can(ops, "disbursement:authorise", { approvedBy: "u3", initiatedBy: "u9" }).ok).toBe(true);
+  });
+  it("initiator cannot authorise their own payout", () => {
+    expect(can(ops, "disbursement:authorise", { approvedBy: "u3", initiatedBy: "u4" })).toEqual({ ok: false, reason: "DUAL_CONTROL" });
   });
   it("rule creator cannot publish", () => {
     expect(can(riskAdmin, "rule:publish", { createdBy: "u5" }).ok).toBe(false);

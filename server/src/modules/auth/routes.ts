@@ -6,6 +6,7 @@ import { User } from "../../models";
 import { config } from "../../config";
 import { HttpError } from "../../shared/errors";
 import { authenticate } from "../../middleware/auth";
+import { rolePermissions, Role } from "../rbac/permissions";
 
 export const authRouter = Router();
 
@@ -34,7 +35,11 @@ authRouter.post("/login", async (req, res) => {
   await user.save();
   const token = signAccess(user);
   res.cookie("access", token, { httpOnly: true, sameSite: "lax", maxAge: 15 * 60 * 1000 });
-  res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role, entityId: user.entityId } });
+  res.json({
+    token,
+    user: { id: user._id, name: user.name, email: user.email, role: user.role, entityId: user.entityId },
+    permissions: rolePermissions[user.role as Role] ?? [],
+  });
 });
 
 authRouter.post("/logout", authenticate, async (req, res) => {
@@ -45,5 +50,5 @@ authRouter.post("/logout", authenticate, async (req, res) => {
 
 authRouter.get("/me", authenticate, async (req, res) => {
   const user = await User.findById(req.actor.id).select("-passwordHash").lean();
-  res.json(user);
+  res.json({ ...user, permissions: rolePermissions[user?.role as Role] ?? [] });
 });

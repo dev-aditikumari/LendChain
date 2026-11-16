@@ -93,9 +93,10 @@ export const Disbursement = mongoose.model("Disbursement", new Schema({
   upfrontInterest: Number,
   net: Number,
   rate: Number,
-  status: { type: String, enum: ["PENDING", "SUCCESS", "FAILED"], default: "PENDING" },
+  status: { type: String, enum: ["PENDING_AUTH", "SUCCESS", "FAILED"], default: "PENDING_AUTH" },
   reference: String,
-  executedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  initiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  authorisedBy: { type: Schema.Types.ObjectId, ref: "User" },
 }, opts));
 
 export const LedgerEntry = mongoose.model("LedgerEntry", new Schema({

@@ -14,6 +14,7 @@ export interface Resource {
   createdBy?: string;
   recommendedBy?: string;
   approvedBy?: string;
+  initiatedBy?: string;
 }
 
 export type Decision = { ok: true } | { ok: false; reason: string };
@@ -37,7 +38,10 @@ export function can(actor: Actor, permission: Permission, res: Resource = {}): D
       return deny("ABOVE_APPROVAL_LIMIT");
     }
   }
-  if (permission === "disbursement:execute" && res.approvedBy === actor.id) return deny("SEGREGATION_OF_DUTIES");
+  if ((permission === "disbursement:initiate" || permission === "disbursement:authorise") && res.approvedBy === actor.id) {
+    return deny("SEGREGATION_OF_DUTIES");
+  }
+  if (permission === "disbursement:authorise" && res.initiatedBy === actor.id) return deny("DUAL_CONTROL");
   if (permission === "rule:publish" && res.createdBy === actor.id) return deny("MAKER_CHECKER");
 
   return { ok: true };
