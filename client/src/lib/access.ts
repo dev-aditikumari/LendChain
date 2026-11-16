@@ -3,7 +3,9 @@ import { ROLE_KEY, type ServerRole } from './serverRoles'
 
 // The server decides which actions a role may take. A screen section is shown in
 // full when the user holds a "full" key and read-only when they hold a "view" key.
-// Which keys count is a presentation choice, so it is the only mapping kept here.
+// Which keys count is a presentation choice, so the view-only levels here are derived
+// from permission keys and may differ from the original design (for example Admin
+// sees Financing as view-only). Menus and route guards still match the design.
 interface SectionRule { full: string[]; view: string[] }
 
 export const SECTION_RULES: Record<string, SectionRule> = {
