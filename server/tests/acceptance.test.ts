@@ -193,6 +193,40 @@ describe("acceptance", () => {
     expect(await Disbursement.countDocuments({ invoiceId: id2 })).toBe(1);
   });
 
+  it("replaying a released payout with the same key returns the original result", async () => {
+    const { id } = await toApproved(w, "INV-13");
+    const init = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    const url = `/disbursements/${init.body.disbursement._id}/authorise`;
+    const first = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "keep");
+    const replay = await request(app).post(url).set(as(w.tokens.finance2)).set("Idempotency-Key", "keep");
+    expect(first.status).toBe(201);
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual(first.body);
+
+    // someone else, with their own key, is told it is already done
+    const other = await request(app).post(url).set(as(w.tokens.finance3)).set("Idempotency-Key", "theirs");
+    expect(other.status).toBe(409);
+    expect(other.body.code).toBe("ALREADY_AUTHORISED");
+
+    // someone else reusing the first caller's key does not get that caller's response
+    const stolen = await request(app).post(url).set(as(w.tokens.finance3)).set("Idempotency-Key", "keep");
+    expect(stolen.status).toBe(409);
+    expect(stolen.body.code).toBe("IDEMPOTENCY_KEY_REUSED");
+    expect(await LedgerEntry.countDocuments({ memo: "disbursement" })).toBe(4);
+  });
+
+  it("a failed payout can be queued again, a live one cannot", async () => {
+    const { id } = await toApproved(w, "INV-14");
+    const first = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    expect((await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id })).status).toBe(409);
+    await Disbursement.updateOne({ _id: first.body.disbursement._id }, { $set: { status: "FAILED" } });
+    const again = await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id });
+    expect(again.status).toBe(201);
+    expect(again.body.disbursement._id).not.toBe(first.body.disbursement._id);
+    expect((await request(app).post("/disbursements").set(as(w.tokens.finance)).send({ invoiceId: id })).status).toBe(409);
+    expect(await Disbursement.countDocuments({ invoiceId: id })).toBe(2);
+  });
+
   it("login returns the permission list for the role", async () => {
     const r = await request(app).post("/auth/login").send({ email: "accounts@t.com", password: "Passw0rd!x" });
     expect(r.body.permissions).toEqual(expect.arrayContaining(["journal:post", "period:close"]));

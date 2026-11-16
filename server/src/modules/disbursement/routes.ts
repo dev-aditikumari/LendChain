@@ -24,7 +24,7 @@ disbursementRouter.post("/", async (req, res) => {
   if (!inv) throw notFound("Invoice");
   check(req, "disbursement:initiate", { approvedBy: String(inv.approvedBy) });
   if (inv.status !== "APPROVED") throw badRequest("Invoice is not approved for disbursement");
-  if (await Disbursement.exists({ invoiceId: inv._id })) throw conflict("A payout is already queued for this invoice");
+  if (await Disbursement.exists({ invoiceId: inv._id, status: { $in: ["PENDING_AUTH", "SUCCESS"] } })) throw conflict("A payout is already queued for this invoice");
   let d;
   try {
     d = await Disbursement.create({
@@ -50,8 +50,15 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
   const key = req.header("Idempotency-Key");
   if (!key) throw badRequest("Idempotency-Key header is required");
 
+  // a key belongs to one caller and one payout
+  const scope = `authorise:${req.actor.id}:${req.params.id}`;
+  const replay = (prior: { scope?: string | null; response?: unknown }) => {
+    if (prior.scope !== scope) throw conflict("Idempotency-Key was used for a different request", "IDEMPOTENCY_KEY_REUSED");
+    return prior.response;
+  };
+
   const prior = await IdempotencyKey.findOne({ key }).lean();
-  if (prior) return res.json(prior.response);
+  if (prior) return res.json(replay(prior));
 
   const session = await mongoose.startSession();
   let response: any;
@@ -60,7 +67,7 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
     await session.withTransaction(async () => {
       const again = await IdempotencyKey.findOne({ key }).session(session).lean();
       if (again) {
-        response = again.response;
+        response = replay(again);
         return;
       }
       const d = await Disbursement.findById(req.params.id).session(session);
@@ -93,12 +100,12 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
       hooks.afterLedger?.();
       await move(inv, "DISBURSED", req.actor.id, { disbursedAt: new Date() }, session);
       response = { disbursement: released!.toObject(), invoiceStatus: inv.status };
-      await IdempotencyKey.create([{ key, response: JSON.parse(JSON.stringify(response)) }], { session });
+      await IdempotencyKey.create([{ key, scope, response: JSON.parse(JSON.stringify(response)) }], { session });
     });
   } catch (e: any) {
     // a concurrent request with the same key may have won
     const won = await IdempotencyKey.findOne({ key }).lean();
-    if (won) return res.json(won.response);
+    if (won && won.scope === scope) return res.json(won.response);
     throw e;
   } finally {
     await session.endSession();
