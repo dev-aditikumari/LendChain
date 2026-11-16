@@ -9,7 +9,7 @@ export default function TrialBalance() {
   const credits = TRIAL_BALANCE.reduce((s, r) => s + Number(r.credit), 0)
   return (
     <>
-      <PageHeader title="Trial balance" subtitle="Closing balances as of 16 Nov 2026." />
+      <PageHeader sample title="Trial balance" subtitle="Closing balances as of 16 Nov 2026." />
       <KpiRow
         items={[
           { label: 'Total debits', value: inrShort(debits), sub: `${TRIAL_BALANCE.length} accounts`, trend: 'Month to date' },

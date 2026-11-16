@@ -20,7 +20,7 @@ export default function PeriodClose() {
   const canClose = can('period:close')
   return (
     <>
-      <PageHeader title="Period close" subtitle="October is closed. November is in progress." actions={canClose && <Button disabled={pending > 0 || locked} onClick={() => setLocked(true)}>Request close</Button>} />
+      <PageHeader sample title="Period close" subtitle="October is closed. November is in progress." actions={canClose && <Button disabled={pending > 0 || locked} onClick={() => setLocked(true)}>Request close</Button>} />
       {locked && <Notice kind="success">Close requested. It needs a second sign-off before the period locks.</Notice>}
       <Card title="Progress"><Stepper steps={STEPS} current={locked ? 3 : 2} /></Card>
       <Grid>

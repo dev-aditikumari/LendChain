@@ -19,6 +19,7 @@ export default function RuleEditor() {
   return (
     <>
       <PageHeader
+        sample
         title="Rule editor"
         subtitle="Draft version 15 of the invoice scoring rules."
         actions={<Button disabled={!canPublish || published} onClick={() => setPublished(true)}>Publish rule set</Button>}

@@ -14,7 +14,7 @@ export default function Accruals() {
   const canPost = can('journal:post')
   return (
     <>
-      <PageHeader title="Accruals" subtitle="Monthly discount accrual runs." />
+      <PageHeader sample title="Accruals" subtitle="Monthly discount accrual runs." />
       <Grid>
         <DataTable
           title="Accrual runs"

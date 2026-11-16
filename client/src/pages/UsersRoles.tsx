@@ -12,7 +12,7 @@ export default function UsersRoles() {
   return (
     <>
       <PageHeader title="Users and roles" subtitle="What each role can do, read from the server. Changes are audited." />
-      {error ? <ErrorMessage error={error} /> : null}
+      {error ? <ErrorMessage page error={error} /> : null}
       {loading && <p className="m-0 text-muted">Loading...</p>}
       {data && <PermissionMatrix title="Action permissions" rowLabel="Action" data={actionMatrix(data)} />}
     </>

@@ -1,40 +1,36 @@
-import Button from '../components/Button'
+import { Link } from 'react-router-dom'
+import { http } from '../api/http'
+import type { Notification } from '../api/types'
 import DataTable from '../components/DataTable'
-import FormCard from '../components/FormCard'
-import { Grid } from '../components/KpiRow'
 import PageHeader from '../components/PageHeader'
-import { NOTIFICATIONS } from '../data/sample'
+import { Async, useRequest } from '../components/RequestState'
+import { dateTime } from '../lib/format'
+import { statusLabel } from '../lib/invoiceStatus'
 
-function Toggle({ label, defaultChecked }: { label: string; defaultChecked?: boolean }) {
-  return (
-    <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
-      <span>{label}</span>
-      <input type="checkbox" defaultChecked={defaultChecked} className="size-5 accent-violet" />
-    </label>
-  )
-}
+const load = () => http<Notification[]>('/notifications')
 
 export default function Notifications() {
+  const req = useRequest(load)
   return (
     <>
-      <PageHeader title="Notifications" subtitle="What happened today and how you hear about it." />
-      <Grid>
-        <DataTable
-          title="Today"
-          columns={[
-            { key: 'time', header: 'Time' },
-            { key: 'event', header: 'Event' },
-            { key: 'channel', header: 'Sent via' },
-          ]}
-          rows={NOTIFICATIONS}
-        />
-        <FormCard title="Delivery settings" buttons={<Button type="submit">Save settings</Button>}>
-          <Toggle label="Email" defaultChecked />
-          <Toggle label="SMS for disputes and payouts" defaultChecked />
-          <Toggle label="In-app" defaultChecked />
-          <Toggle label="Weekly summary" />
-        </FormCard>
-      </Grid>
+      <PageHeader title="Notifications" subtitle="Recent changes on your invoices." />
+      <Async req={req}>
+        {(rows) => (
+          <DataTable
+            title="Recent activity"
+            columns={[
+              { key: 'at', header: 'When', render: (r) => dateTime(r.at) },
+              { key: 'number', header: 'Invoice', render: (r) => <Link to={`/invoices/${r.invoiceId}`} className="font-bold text-violet">{r.number}</Link> },
+              { key: 'to', header: 'Now', render: (r) => statusLabel(r.to) },
+              { key: 'by', header: 'By' },
+              { key: 'note', header: 'Note' },
+            ]}
+            rows={rows}
+            rowKey={(r) => r.id}
+            empty="Nothing has happened yet."
+          />
+        )}
+      </Async>
     </>
   )
 }

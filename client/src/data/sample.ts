@@ -2,10 +2,6 @@ import type { PillKind } from '../components/StatusPill'
 
 export type Row = Record<string, string | number>
 
-export const INVOICE_STATES = [
-  'Draft', 'Submitted', 'Buyer confirmed', 'Financing requested', 'Engine evaluated', 'Approved', 'Disbursed',
-]
-
 export interface Invoice {
   id: string
   buyer: string
@@ -14,77 +10,6 @@ export interface Invoice {
   status: string
   kind: PillKind
 }
-
-export const SUPPLIER_INVOICES: Invoice[] = [
-  { id: 'INV-2041', buyer: 'Tata Auto Parts Ltd', amount: 1850000, due: '28 Nov 2026', status: 'Approved', kind: 'info' },
-  { id: 'INV-2038', buyer: 'Mahindra Logistics', amount: 920000, due: '22 Nov 2026', status: 'Disbursed', kind: 'success' },
-  { id: 'INV-2036', buyer: 'Tata Auto Parts Ltd', amount: 2400000, due: '05 Dec 2026', status: 'Under review', kind: 'warning' },
-  { id: 'INV-2031', buyer: 'Bharat Forge', amount: 640000, due: '19 Nov 2026', status: 'Disbursed', kind: 'success' },
-  { id: 'INV-2027', buyer: 'Mahindra Logistics', amount: 1120000, due: '12 Dec 2026', status: 'Buyer confirmed', kind: 'info' },
-  { id: 'INV-2019', buyer: 'Bharat Forge', amount: 380000, due: '30 Nov 2026', status: 'Disputed', kind: 'danger' },
-]
-
-export const INVOICE_TIMELINE = [
-  { event: 'Invoice submitted', detail: '02 Nov 2026, 10:14 by Meera Iyer' },
-  { event: 'Buyer confirmed', detail: '03 Nov 2026, 16:40 by Rohan Desai' },
-  { event: 'Financing requested', detail: '04 Nov 2026, 09:05, advance 90%, 45 days' },
-  { event: 'Rule engine evaluated', detail: 'Score 742, rule set v14, risk band B' },
-  { event: 'Recommended by analyst', detail: '05 Nov 2026, 11:30 by Kavya Nair' },
-  { event: 'Approved', detail: '06 Nov 2026, 14:12 by Arjun Menon' },
-]
-
-export const SUPPLIER_DOCS: Row[] = [
-  { name: 'Invoice PDF', file: 'INV-2041.pdf', status: 'Verified' },
-  { name: 'Purchase order', file: 'PO-88213.pdf', status: 'Verified' },
-  { name: 'Delivery challan', file: 'DC-5521.pdf', status: 'Under review' },
-]
-
-export const KYC_DOCS: Row[] = [
-  { doc: 'Certificate of incorporation', uploaded: '14 Oct 2026', status: 'Verified' },
-  { doc: 'PAN card', uploaded: '14 Oct 2026', status: 'Verified' },
-  { doc: 'GST registration', uploaded: '15 Oct 2026', status: 'Under review' },
-  { doc: 'Bank statement (6 months)', uploaded: '-', status: 'Not uploaded' },
-  { doc: 'Board resolution', uploaded: '-', status: 'Not uploaded' },
-]
-
-export const BUYER_INBOX: Row[] = [
-  { id: 'INV-2041', supplier: 'Kaveri Components', amount: 1850000, due: '28 Nov 2026', status: 'Awaiting you' },
-  { id: 'INV-2036', supplier: 'Kaveri Components', amount: 2400000, due: '05 Dec 2026', status: 'Awaiting you' },
-  { id: 'INV-2044', supplier: 'Sunrise Plastics', amount: 760000, due: '10 Dec 2026', status: 'Awaiting you' },
-  { id: 'INV-2019', supplier: 'Kaveri Components', amount: 380000, due: '30 Nov 2026', status: 'Disputed' },
-  { id: 'INV-2038', supplier: 'Kaveri Components', amount: 920000, due: '22 Nov 2026', status: 'Confirmed' },
-]
-
-export const DISPUTE_MESSAGES = [
-  { id: 1, from: 'Rohan Desai', own: false, text: 'The delivered quantity was 480 units, the invoice says 500. Please correct the amount.', time: '08 Nov, 10:20' },
-  { id: 2, from: 'Meera Iyer', own: true, text: 'Checking the challan. The remaining 20 units shipped on 4 Nov in a separate truck.', time: '08 Nov, 12:05' },
-  { id: 3, from: 'Rohan Desai', own: false, text: 'We did not receive that truck at the gate. Can you share the lorry receipt?', time: '09 Nov, 09:41' },
-  { id: 4, from: 'Meera Iyer', own: true, text: 'Uploading the lorry receipt now.', time: '09 Nov, 11:15' },
-]
-
-export const ANALYST_QUEUE: Row[] = [
-  { id: 'INV-2036', supplier: 'Kaveri Components', amount: 2400000, engine: 'Refer', sla: '3h left' },
-  { id: 'INV-2044', supplier: 'Sunrise Plastics', amount: 760000, engine: 'Pass', sla: '6h left' },
-  { id: 'INV-2046', supplier: 'Lotus Textiles', amount: 3150000, engine: 'Refer', sla: 'Overdue' },
-  { id: 'INV-2047', supplier: 'Deccan Packaging', amount: 540000, engine: 'Pass', sla: '1d left' },
-  { id: 'INV-2049', supplier: 'Orbit Castings', amount: 1980000, engine: 'Fail', sla: '5h left' },
-]
-
-export const ENGINE_TRACE: Row[] = [
-  { rule: 'Buyer confirmed', detail: 'Confirmed on 03 Nov 2026', result: 'Pass' },
-  { rule: 'Supplier KYC status', detail: 'Verified, valid to Mar 2027', result: 'Pass' },
-  { rule: 'Program limit headroom', detail: '₹18.0 L of ₹20.0 L used after this invoice', result: '+10' },
-  { rule: 'Buyer concentration', detail: '41% of supplier book, cap 45%', result: '-5' },
-  { rule: 'Tenure within policy', detail: '45 days, max 90', result: 'Pass' },
-  { rule: 'Past repayment behaviour', detail: '0 late payments in 12 months', result: '+25' },
-]
-
-export const DISBURSEMENTS: Row[] = [
-  { id: 'DSB-5521', invoice: 'INV-2038', payee: 'Kaveri Components', amount: 828000, initiatedBy: 'finance', authorisedBy: '-', status: 'Pending' },
-  { id: 'DSB-5519', invoice: 'INV-2031', payee: 'Kaveri Components', amount: 576000, initiatedBy: 'finance2', authorisedBy: 'finance', status: 'Disbursed' },
-  { id: 'DSB-5517', invoice: 'INV-2024', payee: 'Sunrise Plastics', amount: 412000, initiatedBy: 'finance2', authorisedBy: '-', status: 'Pending' },
-  { id: 'DSB-5512', invoice: 'INV-2011', payee: 'Lotus Textiles', amount: 1260000, initiatedBy: 'finance', authorisedBy: 'finance2', status: 'Failed' },
-]
 
 export const LEDGER: Row[] = [
   { id: 'JE-9031', date: '15 Nov', account: 'Receivable: Tata Auto Parts', debit: 1850000, credit: 0 },
@@ -212,25 +137,4 @@ export const FUNNEL = [
   { label: 'Approved', value: 1040 },
   { label: 'Disbursed', value: 986 },
   { label: 'Repaid', value: 812 },
-]
-
-export const AUDIT: Row[] = [
-  { time: '16 Nov, 10:42', user: 'Arjun Menon', action: 'Approved invoice', record: 'INV-2041', change: 'Status: Engine evaluated to Approved' },
-  { time: '16 Nov, 10:20', user: 'Kavya Nair', action: 'Recommended decision', record: 'INV-2041', change: 'Recommendation: Approve' },
-  { time: '16 Nov, 09:55', user: 'Pooja Bansal', action: 'Edited rule', record: 'buyer_concentration', change: 'Points: -10 to -15 (draft v15)' },
-  { time: '15 Nov, 17:31', user: 'Nikhil Joshi', action: 'Initiated payout', record: 'DSB-5521', change: 'Amount: ₹8,28,000' },
-  { time: '15 Nov, 15:08', user: 'Ishita Verma', action: 'Changed role', record: 'User: Dev Malhotra', change: 'Role: Analyst to Risk Admin' },
-]
-
-export const NOTIFICATIONS: Row[] = [
-  { time: '09:12', event: 'Buyer confirmed INV-2041', channel: 'Email, in-app' },
-  { time: '10:48', event: 'Financing offer ready for INV-2041', channel: 'Email, in-app' },
-  { time: '13:30', event: 'INV-2019 disputed by buyer', channel: 'Email, SMS' },
-  { time: '15:02', event: 'Payout sent for INV-2038', channel: 'Email, in-app' },
-]
-
-export const USERS_LIST = [
-  { name: 'Meera Iyer', role: 'Supplier' },
-  { name: 'Arjun Menon', role: 'Approver' },
-  { name: 'Pooja Bansal', role: 'Risk Admin' },
 ]

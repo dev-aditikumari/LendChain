@@ -1,58 +1,92 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { http } from '../api/http'
+import type { Evaluation, Invoice, InvoicePage } from '../api/types'
 import Button from '../components/Button'
+import EngineTrace from '../components/EngineTrace'
 import { Field, SelectField } from '../components/Field'
 import FormCard from '../components/FormCard'
 import KeyValueCard from '../components/KeyValueCard'
 import { Grid } from '../components/KpiRow'
 import Notice from '../components/Notice'
 import PageHeader from '../components/PageHeader'
-import { inr } from '../lib/format'
+import { Async, ErrorMessage, useMutation, useRequest } from '../components/RequestState'
+import { money } from '../lib/format'
 
-const INVOICE = 1850000
-const RATE = 11 // % per year, from the pricing grid for band B
+const load = () => http<InvoicePage>('/invoices?status=BUYER_CONFIRMED&limit=100')
 
-export default function FinancingOffer() {
-  const [advance, setAdvance] = useState(90)
-  const [tenure, setTenure] = useState(45)
-  const [accepted, setAccepted] = useState(false)
+interface Outcome { invoice: Invoice; evaluation: Evaluation }
 
-  const adv = Math.round((INVOICE * advance) / 100)
-  const discount = Math.round((adv * RATE * tenure) / (100 * 365))
-  const fee = Math.max(500, Math.round(INVOICE * 0.0025))
-  const net = adv - discount - fee
-  const repay = new Date(Date.UTC(2026, 10, 16 + tenure)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+function Form({ invoices }: { invoices: Invoice[] }) {
+  const [params] = useSearchParams()
+  const m = useMutation()
+  const [invoiceId, setInvoiceId] = useState(params.get('invoice') ?? invoices[0]?._id ?? '')
+  const [advance, setAdvance] = useState('')
+  const [outcome, setOutcome] = useState<Outcome | null>(null)
 
+  const request = async () => {
+    const r = await m.run(() =>
+      http<Outcome>(`/invoices/${invoiceId}/financing-requests`, {
+        body: advance ? { advancePercent: Number(advance) } : {},
+      }),
+    )
+    if (r) setOutcome(r)
+  }
+
+  if (invoices.length === 0 && !outcome) {
+    return <Notice>No invoice is waiting for financing. An invoice shows up here once the buyer has confirmed it.</Notice>
+  }
+
+  const inv = outcome?.invoice
+  const res = outcome?.evaluation.result
   return (
     <>
-      <PageHeader title="Financing offer" subtitle="Offer for INV-2041. Change the advance or tenure to see the amount you receive." />
-      {accepted && <Notice kind="success">Offer accepted. The invoice has moved to review.</Notice>}
       <Grid>
-        <KeyValueCard
-          title="Offer breakdown"
-          rows={[
-            ['Invoice amount', inr(INVOICE)],
-            ['Advance', `${advance}% (${inr(adv)})`],
-            ['Discount rate', `${RATE}% a year`],
-            ['Discount charge', inr(discount)],
-            ['Processing fee', inr(fee)],
-            ['Net amount to you', <span key="n" className="font-display text-[20px] font-extrabold text-violet">{inr(net)}</span>],
-            ['Buyer repays on', repay],
-          ]}
-        />
         <FormCard
-          title="Adjust offer"
-          onSubmit={() => setAccepted(true)}
-          buttons={<Button type="submit" disabled={accepted}>Accept offer</Button>}
+          title="Request financing"
+          onSubmit={request}
+          buttons={<Button type="submit" disabled={!invoiceId || m.busy || !!outcome}>{m.busy ? 'Requesting...' : 'Request financing'}</Button>}
         >
-          <Field label="Advance (%)" type="number" min={50} max={95} value={advance} onChange={(e) => setAdvance(Math.min(95, Math.max(50, Number(e.target.value) || 50)))} hint="Between 50% and 95%." />
-          <SelectField label="Tenure" value={tenure} onChange={(e) => setTenure(Number(e.target.value))}>
-            <option value={30}>30 days</option>
-            <option value={45}>45 days</option>
-            <option value={60}>60 days</option>
-            <option value={90}>90 days</option>
+          <SelectField label="Invoice" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} disabled={!!outcome}>
+            {invoices.map((i) => <option key={i._id} value={i._id}>{i.number} ({money(i.amount)}, {i.buyerName})</option>)}
           </SelectField>
+          <Field
+            label="Advance (%), optional"
+            type="number" min={1} max={100}
+            value={advance} onChange={(e) => setAdvance(e.target.value)}
+            hint="Leave blank to use the program default. The rule engine may lower it."
+            disabled={!!outcome}
+          />
+          {m.error ? <ErrorMessage error={m.error} /> : null}
         </FormCard>
+        {inv && res && (
+          <KeyValueCard
+            title="Offer"
+            rows={
+              res.decision === 'REJECT'
+                ? [['Result', 'Rejected by the rule engine'], ['Reasons', res.reasons.join(', ') || '-']]
+                : [
+                    ['Invoice amount', money(inv.amount)],
+                    ['Advance', `${res.advancePercent}% (${money(inv.financedAmount)})`],
+                    ['Discount rate', `${res.rate}% a year`],
+                    ['Fee', money(res.fee)],
+                    ['Next step', 'Sent for credit review'],
+                  ]
+            }
+          />
+        )}
       </Grid>
+      {outcome && <EngineTrace evaluation={outcome.evaluation} />}
+    </>
+  )
+}
+
+export default function FinancingOffer() {
+  const req = useRequest(load)
+  return (
+    <>
+      <PageHeader title="Financing" subtitle="Ask for an advance against a confirmed invoice. The rule engine prices it straight away." />
+      <Async req={req}>{(page) => <Form invoices={page.items} />}</Async>
     </>
   )
 }

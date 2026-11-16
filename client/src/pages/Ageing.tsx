@@ -13,7 +13,7 @@ export default function Ageing() {
   const sum = (b: string) => OVERDUE.filter((r) => r.bucket === b).reduce((s, r) => s + Number(r.amount), 0)
   return (
     <>
-      <PageHeader title="Ageing" subtitle="Overdue amounts grouped by days past due." />
+      <PageHeader sample title="Ageing" subtitle="Overdue amounts grouped by days past due." />
       <KpiRow
         items={[
           { label: '0-30 days', value: inrShort(sum('0-30')), sub: '1 invoice', trend: 'Reminder stage' },

@@ -12,7 +12,7 @@ export default function Reconciliation() {
   const pct = Math.round((matched / RECON.length) * 100)
   return (
     <>
-      <PageHeader title="Reconciliation" subtitle="Bank statement lines against ledger postings." />
+      <PageHeader sample title="Reconciliation" subtitle="Bank statement lines against ledger postings." />
       <KpiRow
         items={[
           { label: 'Matched', value: `${pct}%`, sub: `${matched} of ${RECON.length} lines`, trend: 'Auto-matched on UTR' },

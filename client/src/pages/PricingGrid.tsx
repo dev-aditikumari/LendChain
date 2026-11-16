@@ -7,7 +7,7 @@ import { FEES, PRICING_BANDS, PRICING_GRID, PRICING_TENURES } from '../data/samp
 export default function PricingGrid() {
   return (
     <>
-      <PageHeader title="Pricing grid" subtitle="Annual discount rate by score band and tenure." />
+      <PageHeader sample title="Pricing grid" subtitle="Annual discount rate by score band and tenure." />
       <Grid>
         <Card title="Rate (% a year)" flush className="overflow-hidden">
           <div className="overflow-x-auto">

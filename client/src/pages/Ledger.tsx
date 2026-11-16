@@ -9,7 +9,7 @@ export default function Ledger() {
   const credits = LEDGER.reduce((s, r) => s + Number(r.credit), 0)
   return (
     <>
-      <PageHeader title="Ledger" subtitle="Double-entry journal. Every posting must balance." />
+      <PageHeader sample title="Ledger" subtitle="Double-entry journal. Every posting must balance." />
       <KpiRow
         items={[
           { label: 'Debits', value: inrShort(debits), sub: `${LEDGER.length} entries`, trend: 'Last 3 days' },
