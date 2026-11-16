@@ -6,28 +6,32 @@ import { HOME } from './lib/permissions'
 import AccessMap from './pages/AccessMap'
 import Accruals from './pages/Accruals'
 import Ageing from './pages/Ageing'
-import AnalystQueue from './pages/AnalystQueue'
-import ApproverReview from './pages/ApproverReview'
 import AuditLog from './pages/AuditLog'
 import BuyerInbox from './pages/BuyerInbox'
 import CreateInvoice from './pages/CreateInvoice'
-import DisputeThread from './pages/DisputeThread'
+import Disputes from './pages/Disputes'
 import Disbursements from './pages/Disbursements'
 import Exceptions from './pages/Exceptions'
 import FinancingOffer from './pages/FinancingOffer'
 import InvoiceDetail from './pages/InvoiceDetail'
+import InvoiceList from './pages/InvoiceList'
+import KycChecks from './pages/KycChecks'
 import Ledger from './pages/Ledger'
 import Login from './pages/Login'
 import Notifications from './pages/Notifications'
 import Onboarding from './pages/Onboarding'
+import Payables from './pages/Payables'
 import PeriodClose from './pages/PeriodClose'
 import Placeholder from './pages/Placeholder'
 import PortfolioOverview from './pages/PortfolioOverview'
 import PricingGrid from './pages/PricingGrid'
 import Programs from './pages/Programs'
 import Reconciliation from './pages/Reconciliation'
+import ReviewDetail from './pages/ReviewDetail'
+import ReviewQueue from './pages/ReviewQueue'
 import RuleEditor from './pages/RuleEditor'
 import SupplierDashboard from './pages/SupplierDashboard'
+import SupplierRepayments from './pages/SupplierRepayments'
 import TrialBalance from './pages/TrialBalance'
 import UsersRoles from './pages/UsersRoles'
 
@@ -52,13 +56,18 @@ export default function App() {
         <Route path="/dashboard" element={g('Dashboard', <SupplierDashboard />)} />
         <Route path="/onboarding" element={g('Dashboard', <Onboarding />)} />
         <Route path="/notifications" element={g('Dashboard', <Notifications />)} />
+        <Route path="/invoices" element={g('Invoices', <InvoiceList />)} />
         <Route path="/invoices/new" element={g('Invoices', <CreateInvoice />)} />
         <Route path="/invoices/:id" element={g('Invoices', <InvoiceDetail />)} />
         <Route path="/financing" element={g('Financing', <FinancingOffer />)} />
         <Route path="/inbox" element={g('Invoices', <BuyerInbox />)} />
-        <Route path="/disputes" element={g('Invoices', <DisputeThread />)} />
-        <Route path="/queue" element={g('Approvals', <AnalystQueue />)} />
-        <Route path="/review" element={g('Approvals', <ApproverReview />)} />
+        <Route path="/disputes" element={g('Invoices', <Disputes />)} />
+        <Route path="/payables" element={g('Invoices', <Payables />)} />
+        <Route path="/repayments" element={g('Invoices', <SupplierRepayments />)} />
+        <Route path="/kyc-checks" element={g('Approvals', <KycChecks />)} />
+        <Route path="/queue" element={g('Approvals', <ReviewQueue role="analyst" />)} />
+        <Route path="/review" element={g('Approvals', <ReviewQueue role="approver" />)} />
+        <Route path="/review/:id" element={g('Approvals', <ReviewDetail />)} />
         <Route path="/disbursements" element={g('Disbursement', <Disbursements />)} />
         <Route path="/ledger" element={g('Ledger', <Ledger />)} />
         <Route path="/exceptions" element={g('Exceptions', <Exceptions />)} />

@@ -45,7 +45,7 @@ export default function AuditLog() {
   return (
     <>
       <PageHeader title="Audit log" subtitle="Every change, who made it and when." />
-      {error ? <ErrorMessage error={error} /> : null}
+      {error ? <ErrorMessage page error={error} /> : null}
       {!error && (
         <>
           <Card title="Filters">

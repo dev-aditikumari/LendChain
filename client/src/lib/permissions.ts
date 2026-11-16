@@ -36,21 +36,21 @@ const n = (label: string, to: string, section: string): NavItem => ({ label, to,
 export const NAV: Record<Role, NavItem[]> = {
   supplier: [
     n('Dashboard', '/dashboard', 'Dashboard'),
-    n('Invoices', '/invoices/new', 'Invoices'),
+    n('Invoices', '/invoices', 'Invoices'),
     n('Financing', '/financing', 'Financing'),
-    n('Repayments', '/p/repayments', 'Invoices'),
+    n('Repayments', '/repayments', 'Invoices'),
     n('Onboarding', '/onboarding', 'Dashboard'),
     n('Notifications', '/notifications', 'Dashboard'),
   ],
   buyer: [
     n('Inbox', '/inbox', 'Invoices'),
-    n('Payables', '/p/payables', 'Invoices'),
+    n('Payables', '/payables', 'Invoices'),
     n('Repayments', '/p/repayments', 'Invoices'),
     n('Disputes', '/disputes', 'Invoices'),
   ],
   analyst: [
     n('Queue', '/queue', 'Approvals'),
-    n('KYC checks', '/p/kyc-checks', 'Approvals'),
+    n('KYC checks', '/kyc-checks', 'Approvals'),
     n('Decisions', '/p/decisions', 'Approvals'),
   ],
   approver: [

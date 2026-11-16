@@ -11,7 +11,7 @@ export default function PortfolioOverview() {
   const top = FUNNEL[0].value
   return (
     <>
-      <PageHeader title="Portfolio overview" subtitle="How the book looks across all programs." />
+      <PageHeader sample title="Portfolio overview" subtitle="How the book looks across all programs." />
       <KpiRow
         items={[
           { label: 'Outstanding', value: '₹21.8 Cr', sub: 'Across 91 suppliers', trend: 'Up 6% on October' },

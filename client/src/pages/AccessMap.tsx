@@ -12,7 +12,7 @@ export default function AccessMap() {
   return (
     <>
       <PageHeader title="Access map" subtitle="Which sections each role can see. The server enforces the same rules." />
-      {error ? <ErrorMessage error={error} /> : null}
+      {error ? <ErrorMessage page error={error} /> : null}
       {loading && <p className="m-0 text-muted">Loading...</p>}
       {data && <PermissionMatrix title="Section visibility" rowLabel="Section" data={sectionMatrix(data)} />}
     </>

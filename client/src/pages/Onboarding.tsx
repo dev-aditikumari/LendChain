@@ -1,33 +1,41 @@
-import Button from '../components/Button'
-import DataTable from '../components/DataTable'
-import { Field } from '../components/Field'
-import FormCard from '../components/FormCard'
-import { Grid } from '../components/KpiRow'
+import { http } from '../api/http'
+import type { Entity } from '../api/types'
+import KeyValueCard from '../components/KeyValueCard'
+import Notice from '../components/Notice'
 import PageHeader from '../components/PageHeader'
+import { Async, useRequest } from '../components/RequestState'
 import StatusPill from '../components/StatusPill'
-import { KYC_DOCS } from '../data/sample'
+
+const load = () => http<Entity>('/entities/mine')
+
+const KYC: Record<string, string> = { PENDING: 'Pending', UNDER_REVIEW: 'Under review', VERIFIED: 'Verified', REJECTED: 'Rejected' }
 
 export default function Onboarding() {
+  const req = useRequest(load)
   return (
     <>
-      <PageHeader title="Onboarding and KYC" subtitle="Keep your business details and documents current to stay eligible for financing." />
-      <Grid>
-        <FormCard title="Business details" buttons={<Button type="submit">Save details</Button>}>
-          <Field label="Legal name" defaultValue="Kaveri Components Pvt Ltd" />
-          <Field label="PAN" defaultValue="AABCK4821M" />
-          <Field label="GSTIN" defaultValue="29AABCK4821M1Z5" />
-          <Field label="Settlement account number" defaultValue="50100284771920" />
-        </FormCard>
-        <DataTable
-          title="Documents"
-          columns={[
-            { key: 'doc', header: 'Document' },
-            { key: 'uploaded', header: 'Uploaded' },
-            { key: 'status', header: 'Status', render: (r) => <StatusPill>{String(r.status)}</StatusPill> },
-          ]}
-          rows={KYC_DOCS}
-        />
-      </Grid>
+      <PageHeader title="Onboarding and KYC" subtitle="Your business details and where your verification stands." />
+      <Async req={req}>
+        {(e) => (
+          <>
+            {e.kycStatus === 'REJECTED' && <Notice kind="danger">Verification was rejected{e.kycRemarks ? `: ${e.kycRemarks}` : '.'}</Notice>}
+            {e.kycStatus !== 'VERIFIED' && e.kycStatus !== 'REJECTED' && (
+              <Notice kind="warning">Financing opens once an analyst verifies your business.</Notice>
+            )}
+            <KeyValueCard
+              title="Business details"
+              rows={[
+                ['Legal name', e.legalName],
+                ['PAN', e.pan ?? '-'],
+                ['GSTIN', e.gstin ?? '-'],
+                ['Settlement account', e.bankAccount ?? 'Not added'],
+                ['Months in business', String(e.vintageMonths ?? 0)],
+                ['KYC status', <StatusPill key="k">{KYC[e.kycStatus ?? 'PENDING'] ?? 'Pending'}</StatusPill>],
+              ]}
+            />
+          </>
+        )}
+      </Async>
     </>
   )
 }

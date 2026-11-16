@@ -60,7 +60,27 @@ export async function http<T = unknown>(path: string, opts: Options = {}): Promi
   return data as T
 }
 
+// the server sends a short code with each refusal; these say what it means for the person using the screen
+const CODE_MESSAGE: Record<string, string> = {
+  ROLE_NOT_ALLOWED: 'Your role is not allowed to do this.',
+  NOT_YOUR_INVOICE: 'This invoice does not belong to you.',
+  MAKER_CHECKER: 'You created or recommended this record, so someone else has to decide it.',
+  ABOVE_APPROVAL_LIMIT: 'This amount is above your approval limit and has to be escalated.',
+  SEGREGATION_OF_DUTIES: 'You approved this invoice, so you cannot also move its money.',
+  DUAL_CONTROL: 'You queued this payout, so a different person has to authorise it.',
+  ALREADY_AUTHORISED: 'Someone else already released this payout.',
+  IDEMPOTENCY_KEY_REUSED: 'That request was already used for something else. Try again.',
+  LIMIT_EXCEEDED: 'The program limit would be exceeded, so the invoice was rejected.',
+  DUPLICATE_INVOICE: 'An invoice with this number, amount and date already exists for this buyer.',
+  NO_PROGRAM: 'There is no financing program between you and this buyer.',
+  OVERPAYMENT: 'That is more than what is due.',
+  VERSION_CONFLICT: 'Someone else changed this invoice. Reload and try again.',
+}
+
 export function messageFor(err: unknown): string {
-  if (err instanceof ApiError && err.status === 403) return 'You are not allowed to do that.'
+  if (err instanceof ApiError) {
+    if (err.code && CODE_MESSAGE[err.code]) return CODE_MESSAGE[err.code]
+    if (err.status === 403) return 'You are not allowed to do that.'
+  }
   return err instanceof Error ? err.message : 'Something went wrong.'
 }

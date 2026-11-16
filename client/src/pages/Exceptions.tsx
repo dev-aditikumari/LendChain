@@ -15,7 +15,7 @@ export default function Exceptions() {
 
   return (
     <>
-      <PageHeader title="Exceptions" subtitle="Items the automatic flow could not settle." />
+      <PageHeader sample title="Exceptions" subtitle="Items the automatic flow could not settle." />
       <KpiRow
         items={[
           { label: 'Open', value: String(rows.length), sub: 'Across all types', trend: '1 new today' },

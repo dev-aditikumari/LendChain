@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { Entity, Program, RuleSet, RuleEvaluation, User, AuditLog } from "../../models";
+import { Entity, Program, RuleSet, RuleEvaluation, User, AuditLog, Invoice, InvoiceEvent } from "../../models";
 import { authenticate, check, require } from "../../middleware/auth";
 import { badRequest, notFound } from "../../shared/errors";
 import { evaluate } from "../rules-engine/evaluator";
@@ -9,6 +9,7 @@ import { entries, trialBalance } from "../ledger/repository";
 import { ageing } from "../repayments/overdue";
 import { audit } from "../../shared/audit";
 import { rolePermissions } from "../rbac/permissions";
+import { invoiceScope } from "../rbac/policy";
 
 export const adminRouter = Router();
 adminRouter.use(authenticate);
@@ -36,6 +37,12 @@ adminRouter.patch("/entities/:id/kyc", async (req, res) => {
   if (!e) throw notFound("Entity");
   await audit(req, "entity.kyc", String(e._id), null, body);
   res.json(e);
+});
+
+adminRouter.get("/entities/mine", async (req, res) => {
+  const e = req.actor.entityId ? await Entity.findById(req.actor.entityId).lean() : null;
+  if (!e) throw notFound("Entity");
+  res.json({ ...e, pan: mask(e.pan), bankAccount: e.bankAccount ? mask(e.bankAccount) : undefined });
 });
 
 adminRouter.get("/entities", async (req, res) => {
@@ -79,7 +86,14 @@ adminRouter.get("/programs", async (req, res) => {
   const filter: Record<string, unknown> = {};
   if (req.actor.role === "SUPPLIER") filter.supplierId = req.actor.entityId;
   if (req.actor.role === "BUYER") filter.buyerId = req.actor.entityId;
-  res.json(await Program.find(filter).lean());
+  const rows = await Program.find(filter).populate("supplierId buyerId", "legalName").lean();
+  res.json(rows.map((p: any) => ({
+    ...p,
+    supplierName: p.supplierId?.legalName,
+    buyerName: p.buyerId?.legalName,
+    supplierId: p.supplierId?._id,
+    buyerId: p.buyerId?._id,
+  })));
 });
 
 adminRouter.post("/rule-sets", async (req, res) => {
@@ -142,4 +156,17 @@ adminRouter.get("/collections/ageing", async (req, res) => {
 adminRouter.get("/access/roles", async (req, res) => {
   check(req, "user:manage", {});
   res.json(rolePermissions);
+});
+
+// recent invoice events for the invoices this user is allowed to see
+adminRouter.get("/notifications", async (req, res) => {
+  check(req, "invoice:read", {});
+  const mine = await Invoice.find(invoiceScope(req.actor)).select("number").lean();
+  const numbers = new Map(mine.map((i) => [String(i._id), i.number]));
+  const events = await InvoiceEvent.find({ invoiceId: { $in: [...numbers.keys()] } })
+    .sort({ createdAt: -1 }).limit(30).populate("actor", "name").lean();
+  res.json(events.map((e: any) => ({
+    id: e._id, at: e.createdAt, invoiceId: e.invoiceId, number: numbers.get(String(e.invoiceId)),
+    from: e.from, to: e.to, by: e.actor?.name ?? "system", note: e.note,
+  })));
 });

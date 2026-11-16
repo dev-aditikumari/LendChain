@@ -36,7 +36,7 @@ npm run dev
 
 The dev server forwards `/api/*` to the API at `http://localhost:5000`. Set `API_TARGET` to point the proxy somewhere else, or `VITE_API_URL` to call an API directly.
 
-Sign-in uses the real API. Most screens still show sample data from `src/data/sample.ts`; Users and roles, Access map and Audit log read from the server.
+Sign-in and the invoice flow use the real API: onboarding and KYC, programs, invoices, financing, buyer confirm or dispute, credit review, the two-step payout, repayment, notifications, users and roles, access map and audit log. Ledger, Operations, Accounts, Collections, Risk Admin and the admin overview still show sample data from `src/data/sample.ts` and are marked "Sample data" in the page title.
 
 Demo logins (password `Demo@1234`). The server has no second sign-in step yet.
 
@@ -55,7 +55,7 @@ Demo logins (password `Demo@1234`). The server has no second sign-in step yet.
 
 Menus, routes and buttons follow the permission list the server returns at login. `src/lib/access.ts` holds the one small mapping from permission keys to the sections a role sees in full or read-only. These checks only change what the UI shows. They are not security: the server must enforce every permission and every maker-checker rule itself, whatever the client hides.
 
-These menu items open a "coming soon" page because they have no design yet: Repayments, Payables, KYC checks, Decisions, Approved, Rejected, Limits, Payout monitor, Master data, Settlements, Tax & GST, Follow-ups, Overdue and Settings.
+These menu items open a "coming soon" page: Repayments (buyer), Decisions, Approved, Rejected, Limits, Payout monitor, Master data, Settlements, Tax & GST, Follow-ups, Overdue and Settings.
 
 ## Tests
 
@@ -65,6 +65,13 @@ npm test
 ```
 
 Covers the rule engine, ledger, state machine, permission policy and the main workflow rules: supplier scoping, maker-checker, idempotent disbursement, balanced ledger, reproducible decisions and the concurrent limit check.
+
+To run the whole invoice flow (draft to repaid, plus an overdue invoice, an escalation above the approver's limit, dual control and the audit log) against a fresh in-memory server:
+
+```
+cd server
+npm run e2e
+```
 
 ## Design notes
 

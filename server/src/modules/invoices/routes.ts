@@ -10,6 +10,15 @@ import { evaluate } from "../rules-engine/evaluator";
 import { reserveLimit } from "../programs/limit";
 import { audit } from "../../shared/audit";
 
+// replaces the populated entities with plain ids plus display names
+const named = (i: any) => ({
+  ...i,
+  supplierName: i.supplierId?.legalName,
+  buyerName: i.buyerId?.legalName,
+  supplierId: i.supplierId?._id ?? i.supplierId,
+  buyerId: i.buyerId?._id ?? i.buyerId,
+});
+
 export const invoiceRouter = Router();
 invoiceRouter.use(authenticate);
 
@@ -26,6 +35,8 @@ async function load(req: any, permission: any) {
   const inv = await Invoice.findById(req.params.id);
   if (!inv) throw notFound("Invoice");
   check(req, permission, { supplierId: String(inv.supplierId), buyerId: String(inv.buyerId), amount: inv.amount });
+  // a buyer only sees an invoice once the supplier has submitted it
+  if (req.actor.role === "BUYER" && inv.status === "DRAFT") throw notFound("Invoice");
   return inv;
 }
 
@@ -46,18 +57,21 @@ invoiceRouter.get("/", require("invoice:read"), async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 20, 100);
   const filter: Record<string, unknown> = { ...invoiceScope(req.actor) };
   if (req.query.status) filter.status = req.query.status;
+  else if (req.actor.role === "BUYER") filter.status = { $ne: "DRAFT" };
   if (req.query.cursor) filter._id = { $lt: req.query.cursor };
-  const items = await Invoice.find(filter).sort({ _id: -1 }).limit(limit).lean();
+  const rows = await Invoice.find(filter).sort({ _id: -1 }).limit(limit).populate("supplierId buyerId", "legalName").lean();
+  const items = rows.map(named);
   res.json({ items, nextCursor: items.length === limit ? items[items.length - 1]._id : null });
 });
 
 invoiceRouter.get("/:id", async (req, res) => {
   const inv = await load(req, "invoice:read");
-  const [events, evaluation] = await Promise.all([
-    InvoiceEvent.find({ invoiceId: inv._id }).sort({ createdAt: 1 }).lean(),
+  const [events, evaluation, names] = await Promise.all([
+    InvoiceEvent.find({ invoiceId: inv._id }).sort({ createdAt: 1 }).populate("actor", "name").lean(),
     RuleEvaluation.findOne({ invoiceId: inv._id }).sort({ createdAt: -1 }).lean(),
+    Invoice.findById(inv._id).populate("supplierId buyerId", "legalName").lean(),
   ]);
-  res.json({ invoice: inv, events, evaluation });
+  res.json({ invoice: named(names), events, evaluation });
 });
 
 invoiceRouter.post("/:id/submit", async (req, res) => {
