@@ -44,6 +44,7 @@ export async function seedWorld(sanctioned = 100000 * 100) {
     approver: await mk("approver@t.com", "APPROVER", { approvalLimit: 500000 * 100 }),
     finance: await mk("finance@t.com", "FINANCE_OPS"),
     finance2: await mk("finance2@t.com", "FINANCE_OPS"),
+    finance3: await mk("finance3@t.com", "FINANCE_OPS"),
     ops: await mk("ops@t.com", "OPERATIONS"),
     accounts: await mk("accounts@t.com", "ACCOUNTS"),
     risk1: await mk("risk1@t.com", "RISK_ADMIN"),

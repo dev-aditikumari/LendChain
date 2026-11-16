@@ -25,9 +25,16 @@ disbursementRouter.post("/", async (req, res) => {
   check(req, "disbursement:initiate", { approvedBy: String(inv.approvedBy) });
   if (inv.status !== "APPROVED") throw badRequest("Invoice is not approved for disbursement");
   if (await Disbursement.exists({ invoiceId: inv._id })) throw conflict("A payout is already queued for this invoice");
-  const d = await Disbursement.create({
-    invoiceId: inv._id, amount: inv.financedAmount, status: "PENDING_AUTH", initiatedBy: req.actor.id,
-  });
+  let d;
+  try {
+    d = await Disbursement.create({
+      invoiceId: inv._id, amount: inv.financedAmount, status: "PENDING_AUTH", initiatedBy: req.actor.id,
+    });
+  } catch (e: any) {
+    // the unique index on invoiceId decides when two requests race
+    if (e?.code === 11000) throw conflict("A payout is already queued for this invoice");
+    throw e;
+  }
   await audit(req, "disbursement.initiate", invoiceId, null, { disbursementId: String(d._id) });
   res.status(201).json({ disbursement: d.toObject() });
 });
@@ -62,7 +69,7 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
       if (!inv) throw notFound("Invoice");
       invoiceId = String(inv._id);
       check(req, "disbursement:authorise", { approvedBy: String(inv.approvedBy), initiatedBy: String(d.initiatedBy) });
-      if (d.status !== "PENDING_AUTH") throw badRequest("Payout is not waiting for authorisation");
+      if (d.status !== "PENDING_AUTH") throw conflict("Payout was already released", "ALREADY_AUTHORISED");
       if (inv.status !== "APPROVED") throw badRequest("Invoice is not approved for disbursement");
 
       const evaluation = await RuleEvaluation.findOne({ invoiceId: inv._id }).sort({ createdAt: -1 }).session(session).lean();
@@ -74,15 +81,18 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
       const net = advance - fee - upfrontInterest;
       if (net <= 0) throw badRequest("Net disbursal is not positive");
 
-      Object.assign(d, {
-        amount: advance, fee, upfrontInterest, net, rate: result.rate,
-        status: "SUCCESS", reference: "MOCK-" + Date.now(), authorisedBy: req.actor.id,
-      });
-      await d.save({ session });
+      // one conditional update decides who releases the payout
+      const claimed = await Disbursement.updateOne(
+        { _id: d._id, status: "PENDING_AUTH" },
+        { $set: { amount: advance, fee, upfrontInterest, net, rate: result.rate, status: "SUCCESS", reference: "MOCK-" + Date.now(), authorisedBy: req.actor.id } },
+        { session },
+      );
+      if (claimed.modifiedCount !== 1) throw conflict("Payout was already released", "ALREADY_AUTHORISED");
+      const released = await Disbursement.findById(d._id).session(session);
       await post(String(d._id), inv._id, disbursementLines({ advance, fee, upfrontInterest }), "disbursement", session);
       hooks.afterLedger?.();
       await move(inv, "DISBURSED", req.actor.id, { disbursedAt: new Date() }, session);
-      response = { disbursement: d.toObject(), invoiceStatus: inv.status };
+      response = { disbursement: released!.toObject(), invoiceStatus: inv.status };
       await IdempotencyKey.create([{ key, response: JSON.parse(JSON.stringify(response)) }], { session });
     });
   } catch (e: any) {
