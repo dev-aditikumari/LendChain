@@ -41,7 +41,10 @@ disbursementRouter.post("/", async (req, res) => {
 
 disbursementRouter.get("/", async (req, res) => {
   check(req, "disbursement:read", {});
-  const rows = await Disbursement.find().sort({ createdAt: -1 }).limit(100).lean();
+  const rows = await Disbursement.find().sort({ createdAt: -1 }).limit(100)
+    .populate("initiatedBy authorisedBy", "name")
+    .populate({ path: "invoiceId", select: "number amount buyerId supplierId", populate: { path: "supplierId buyerId", select: "legalName" } })
+    .lean();
   res.json(rows);
 });
 

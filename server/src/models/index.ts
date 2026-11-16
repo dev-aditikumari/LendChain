@@ -87,7 +87,7 @@ export const RuleEvaluation = mongoose.model("RuleEvaluation", new Schema({
 }, opts));
 
 const disbursementSchema = new Schema({
-  invoiceId: { type: Schema.Types.ObjectId, required: true },
+  invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice", required: true },
   amount: Number,
   fee: Number,
   upfrontInterest: Number,

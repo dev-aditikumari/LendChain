@@ -234,6 +234,17 @@ describe("acceptance", () => {
     expect(r.body.ACCOUNTS).toContain("period:close");
   });
 
+  it("a buyer cannot see a supplier's draft", async () => {
+    const { body } = await newInvoice(w, "INV-DRAFT");
+    const list = await request(app).get("/invoices").set(as(w.tokens.buyer));
+    expect(list.body.items.map((i: any) => i.number)).not.toContain("INV-DRAFT");
+    const one = await request(app).get(`/invoices/${body._id}`).set(as(w.tokens.buyer));
+    expect(one.status).toBe(404);
+    await request(app).post(`/invoices/${body._id}/submit`).set(as(w.tokens.supplier));
+    const after = await request(app).get("/invoices").set(as(w.tokens.buyer));
+    expect(after.body.items.map((i: any) => i.number)).toContain("INV-DRAFT");
+  });
+
   it("login returns the permission list for the role", async () => {
     const r = await request(app).post("/auth/login").send({ email: "accounts@t.com", password: "Passw0rd!x" });
     expect(r.body.permissions).toEqual(expect.arrayContaining(["journal:post", "period:close"]));
