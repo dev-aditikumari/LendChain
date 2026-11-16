@@ -24,6 +24,37 @@ npm run dev
 
 The client expects the API at `http://localhost:5000` (override with `VITE_API_URL`).
 
+## Client
+
+React 19, Vite, TypeScript and Tailwind. Run it with:
+
+```
+cd client
+npm install
+npm run dev
+```
+
+All 26 screens run on sample data in `src/data/sample.ts`. The API at `http://localhost:5000` is not built yet, so sign-in goes through a mock in `src/api/client.ts`.
+
+Demo logins (password `Demo@1234`; internal roles also need the 2-step code `123456`). The password and code are demo-only and live in the mock login.
+
+| Role | Email |
+|---|---|
+| Supplier | `supplier@lendchain.test` |
+| Buyer | `buyer@lendchain.test` |
+| Analyst | `analyst@lendchain.test` |
+| Approver | `approver@lendchain.test` |
+| Finance Ops | `finance@lendchain.test` |
+| Operations | `ops@lendchain.test` |
+| Accounts | `accounts@lendchain.test` |
+| Collections | `collections@lendchain.test` |
+| Risk Admin | `risk1@lendchain.test` |
+| Admin | `admin@lendchain.test` |
+
+Menus, routes and buttons follow `src/lib/permissions.ts`. These checks only change what the UI shows. They are not security: the server must enforce every permission and every maker-checker rule itself, whatever the client hides.
+
+These menu items open a "coming soon" page because they have no design yet: Repayments, Payables, KYC checks, Decisions, Approved, Rejected, Limits, Payout monitor, Master data, Settlements, Tax & GST, Follow-ups, Overdue and Settings.
+
 ## Tests
 
 ```
