@@ -11,6 +11,7 @@ import { invoiceRouter } from "./modules/invoices/routes";
 import { creditRouter } from "./modules/credit/routes";
 import { disbursementRouter } from "./modules/disbursement/routes";
 import { repaymentRouter } from "./modules/repayments/routes";
+import { ruleSetRouter } from "./modules/rules-engine/routes";
 import { adminRouter } from "./modules/admin/routes";
 
 export function createApp() {
@@ -27,6 +28,7 @@ export function createApp() {
   app.use("/approvals", creditRouter);
   app.use("/disbursements", disbursementRouter);
   app.use("/repayments", repaymentRouter);
+  app.use("/rule-sets", ruleSetRouter);
   app.use("/", adminRouter);
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

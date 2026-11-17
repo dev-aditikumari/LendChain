@@ -30,6 +30,7 @@ import Reconciliation from './pages/Reconciliation'
 import ReviewDetail from './pages/ReviewDetail'
 import ReviewQueue from './pages/ReviewQueue'
 import RuleEditor from './pages/RuleEditor'
+import RuleSetDetail from './pages/RuleSetDetail'
 import SupplierDashboard from './pages/SupplierDashboard'
 import SupplierRepayments from './pages/SupplierRepayments'
 import TrialBalance from './pages/TrialBalance'
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="/period-close" element={g('Trial balance / close', <PeriodClose />)} />
         <Route path="/ageing" element={g('Collections', <Ageing />)} />
         <Route path="/rules" element={g('Rule engine', <RuleEditor />)} />
+        <Route path="/rules/:id" element={g('Rule engine', <RuleSetDetail />)} />
         <Route path="/pricing" element={g('Rule engine', <PricingGrid />)} />
         <Route path="/overview" element={g('Dashboard', <PortfolioOverview />)} />
         <Route path="/programs" element={g('Dashboard', <Programs />)} />

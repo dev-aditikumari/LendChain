@@ -1,10 +1,9 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { Entity, Program, RuleSet, RuleEvaluation, User, AuditLog, Invoice, InvoiceEvent } from "../../models";
+import { Entity, Program, User, AuditLog, Invoice, InvoiceEvent } from "../../models";
 import { authenticate, check, require } from "../../middleware/auth";
 import { badRequest, notFound } from "../../shared/errors";
-import { evaluate } from "../rules-engine/evaluator";
 import { entries, trialBalance } from "../ledger/repository";
 import { ageing } from "../repayments/overdue";
 import { audit } from "../../shared/audit";
@@ -94,48 +93,6 @@ adminRouter.get("/programs", async (req, res) => {
     supplierId: p.supplierId?._id,
     buyerId: p.buyerId?._id,
   })));
-});
-
-adminRouter.post("/rule-sets", async (req, res) => {
-  const body = z.object({ rules: z.array(z.any()), pricing: z.any() }).parse(req.body);
-  check(req, "rule:propose", {});
-  const last = await RuleSet.findOne().sort({ version: -1 }).lean();
-  const rs = await RuleSet.create({ ...body, version: (last?.version ?? 0) + 1, createdBy: req.actor.id });
-  await audit(req, "ruleset.propose", String(rs._id));
-  res.status(201).json(rs);
-});
-
-adminRouter.get("/rule-sets", async (req, res) => {
-  check(req, "rule:propose", {});
-  res.json(await RuleSet.find().sort({ version: -1 }).lean());
-});
-
-adminRouter.post("/rule-sets/:id/publish", async (req, res) => {
-  const rs = await RuleSet.findById(req.params.id);
-  if (!rs) throw notFound("Rule set");
-  check(req, "rule:publish", { createdBy: String(rs.createdBy) });
-  if (rs.status !== "DRAFT") throw badRequest("Only a draft can be published");
-  await RuleSet.updateMany({ status: "PUBLISHED" }, { status: "ARCHIVED" });
-  rs.status = "PUBLISHED";
-  rs.publishedBy = req.actor.id as any;
-  await rs.save();
-  await audit(req, "ruleset.publish", String(rs._id));
-  res.json(rs);
-});
-
-adminRouter.post("/rule-sets/:id/simulate", async (req, res) => {
-  check(req, "rule:propose", {});
-  const rs = await RuleSet.findById(req.params.id).lean();
-  if (!rs) throw notFound("Rule set");
-  const past = await RuleEvaluation.find().sort({ createdAt: -1 }).limit(500).lean();
-  let changed = 0;
-  const rows = past.map((p: any) => {
-    const next = evaluate(rs.rules as any, rs.pricing as any, p.facts);
-    const diff = next.decision !== p.result.decision;
-    if (diff) changed++;
-    return { invoiceId: p.invoiceId, before: p.result.decision, after: next.decision, changed: diff };
-  });
-  res.json({ total: rows.length, changed, rows });
 });
 
 adminRouter.get("/ledger/entries", async (req, res) => {

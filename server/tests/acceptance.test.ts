@@ -95,11 +95,11 @@ describe("acceptance", () => {
     // publish a stricter version afterwards
     const v1: any = await RuleSet.findOne({ version: ev.ruleSetVersion }).lean();
     const strict = await request(app).post("/rule-sets").set(as(w.tokens.risk1)).send({ rules: [], pricing: v1.pricing });
+    const sim = await request(app).post(`/rule-sets/${strict.body._id}/simulate`).set(as(w.tokens.risk1));
+    expect(sim.body.changed).toBe(1);
     await request(app).post(`/rule-sets/${strict.body._id}/publish`).set(as(w.tokens.risk2));
     const again = evaluate(v1.rules, v1.pricing, ev.facts);
     expect(again).toEqual(ev.result);
-    const sim = await request(app).post(`/rule-sets/${strict.body._id}/simulate`).set(as(w.tokens.risk1));
-    expect(sim.body.changed).toBe(1);
   });
 
   it("concurrent financing requests cannot exceed the program limit", async () => {
