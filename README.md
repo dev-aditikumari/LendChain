@@ -4,6 +4,42 @@ Supply chain finance platform. A supplier raises an invoice against a large buye
 
 Stack: Node.js, Express 5, TypeScript, MongoDB (Mongoose), React with Vite.
 
+## Screenshots
+
+Taken from the running app with the demo data. Each screen is shown for the role that uses it.
+
+| | |
+|---|---|
+| ![Sign in](docs/screenshots/01-login.jpg) | ![Supplier dashboard](docs/screenshots/02-supplier-dashboard.jpg) |
+| Sign in | Supplier dashboard: limit, financed amount and recent invoices |
+| ![Invoices](docs/screenshots/03-invoices.jpg) | ![Buyer inbox](docs/screenshots/05-buyer-inbox.jpg) |
+| Supplier invoice list | Buyer inbox: accept or dispute an invoice |
+| ![Analyst queue](docs/screenshots/07-analyst-queue.jpg) | ![Payables](docs/screenshots/06-buyer-payables.jpg) |
+| Analyst review queue | Buyer payables and repayment |
+
+**Invoice detail with the engine trace.** Every decision stores the rule set version, the facts and each rule that fired.
+
+![Invoice detail with engine trace](docs/screenshots/04-invoice-detail-engine-trace.jpg)
+
+**Approver review.** The approver sees the engine result and the analyst recommendation. The server refuses an approval by the person who recommended it, or above their limit.
+
+![Approver review](docs/screenshots/08-approver-review.jpg)
+
+**Payouts with dual control.** One Finance Ops user queues a payout and a different one releases it.
+
+![Payouts](docs/screenshots/09-payouts-dual-control.jpg)
+
+**Rule engine.** Rule sets are versioned. A Risk Admin edits a draft and back-tests it against recent requests, and a second Risk Admin publishes it.
+
+![Rule sets](docs/screenshots/10-rule-sets.jpg)
+![Rule draft and back-test](docs/screenshots/11-rule-draft-backtest.jpg)
+![Pricing grid](docs/screenshots/12-pricing-grid.jpg)
+
+**Audit log and access map.**
+
+![Audit log](docs/screenshots/13-audit-log.jpg)
+![Access map](docs/screenshots/14-access-map.jpg)
+
 ## Run locally
 
 Needs Node 20.
@@ -36,7 +72,7 @@ npm run dev
 
 The dev server forwards `/api/*` to the API at `http://localhost:5000`. Set `API_TARGET` to point the proxy somewhere else, or `VITE_API_URL` to call an API directly.
 
-Sign-in and the invoice flow use the real API: onboarding and KYC, programs, invoices, financing, buyer confirm or dispute, credit review, the two-step payout, repayment, notifications, users and roles, access map and audit log. Ledger, Operations, Accounts, Collections, Risk Admin and the admin overview still show sample data from `src/data/sample.ts` and are marked "Sample data" in the page title.
+Sign-in and the invoice flow use the real API: onboarding and KYC, programs, invoices, financing, buyer confirm or dispute, credit review, the two-step payout, repayment, notifications, rule sets (drafts, back-test, publish by a second reviewer) and the pricing grid, users and roles, access map and audit log. Ledger, Operations, Accounts, Collections and the admin overview still show sample data from `src/data/sample.ts` and are marked "Sample data" in the page title.
 
 Demo logins (password `Demo@1234`). The server has no second sign-in step yet.
 
