@@ -115,3 +115,54 @@ export interface InvoicePage {
   items: Invoice[]
   nextCursor: string | null
 }
+
+export type Op = 'eq' | 'gt' | 'lt' | 'between' | 'in' | 'regex'
+export type Condition =
+  | { fact: string; op: Op; value: unknown }
+  | { all: Condition[] }
+  | { any: Condition[] }
+
+export interface Rule {
+  id: string
+  type: 'eligibility' | 'scoring' | 'pricing'
+  when: Condition
+  then: { decision?: 'APPROVE' | 'REFER' | 'REJECT'; reason?: string; points?: number; rate?: number; fee?: number; advancePercent?: number }
+}
+
+export interface PricingConfig {
+  baseRate: number
+  minFee: number
+  feePercent: number
+  defaultAdvancePercent: number
+  scoreBands: { min: number; premium: number }[]
+  tenureSlabs: { upToDays: number; add: number }[]
+  approveScore: number
+  referScore: number
+}
+
+export interface RuleSet {
+  _id: string
+  version: number
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  rules: Rule[]
+  pricing: PricingConfig
+  createdBy?: string
+  createdByName?: string
+  publishedByName?: string
+  createdAt: string
+}
+
+export interface FactDef { key: string; label: string; kind: 'number' | 'text' | 'boolean' }
+
+interface Outcome { decision: 'APPROVE' | 'REFER' | 'REJECT'; score: number; rate: number }
+interface Tally { approve: number; refer: number; reject: number; avgRate: number }
+
+export interface BackTest {
+  liveVersion: number
+  draftVersion: number
+  total: number
+  changed: number
+  live: Tally
+  draft: Tally
+  rows: { invoiceId: string; number?: string; amount?: number; before: Outcome; after: Outcome; changed: boolean }[]
+}

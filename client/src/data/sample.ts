@@ -66,48 +66,6 @@ export const OVERDUE: Row[] = [
   { id: 'INV-1884', buyer: 'Deccan Packaging', amount: 310000, days: 104, bucket: '90+', contact: 'Neha Gupta' },
 ]
 
-export const RULES: Row[] = [
-  { name: 'Buyer confirmed', type: 'Gate', points: 'Pass/fail', status: 'Active' },
-  { name: 'Program limit headroom', type: 'Score', points: '+10 to -20', status: 'Active' },
-  { name: 'Buyer concentration cap', type: 'Score', points: '-5 to -15', status: 'Active' },
-  { name: 'Late payment history', type: 'Score', points: '+25 to -30', status: 'Draft' },
-]
-
-export const RULE_JSON = `{
-  "id": "buyer_concentration",
-  "version": 15,
-  "when": {
-    "fact": "buyerShareOfSupplierBook",
-    "operator": "greaterThan",
-    "value": 0.45
-  },
-  "then": { "points": -15, "reason": "Buyer share above cap" },
-  "else": { "points": -5 }
-}`
-
-export const BACKTEST: Row[] = [
-  { metric: 'Invoices replayed', current: '1,240', draft: '1,240' },
-  { metric: 'Auto-approved', current: '62%', draft: '58%' },
-  { metric: 'Referred to analyst', current: '31%', draft: '35%' },
-  { metric: 'Rejected', current: '7%', draft: '7%' },
-]
-
-export const PRICING_BANDS = ['A (800+)', 'B (700-799)', 'C (600-699)', 'D (<600)']
-export const PRICING_TENURES = ['30 days', '60 days', '90 days']
-export const PRICING_GRID: number[][] = [
-  [9.5, 10.0, 10.5],
-  [10.5, 11.0, 11.75],
-  [12.0, 12.75, 13.5],
-  [14.5, 15.5, 16.5],
-]
-
-export const FEES: Row[] = [
-  { fee: 'Processing fee', value: '0.25% of invoice, min ₹500' },
-  { fee: 'Penal rate', value: '2% p.a. over contract rate' },
-  { fee: 'Grace days', value: '3' },
-  { fee: 'Prepayment fee', value: 'None' },
-]
-
 export const DISBURSEMENT_MONTHS = [
   { label: 'Jun', value: 4.2 },
   { label: 'Jul', value: 5.1 },

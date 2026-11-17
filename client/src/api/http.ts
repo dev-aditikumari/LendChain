@@ -74,6 +74,8 @@ const CODE_MESSAGE: Record<string, string> = {
   DUPLICATE_INVOICE: 'An invoice with this number, amount and date already exists for this buyer.',
   NO_PROGRAM: 'There is no financing program between you and this buyer.',
   OVERPAYMENT: 'That is more than what is due.',
+  NOT_A_DRAFT: 'Only a draft can be changed or published.',
+  NOT_YOUR_DRAFT: 'This draft belongs to someone else.',
   VERSION_CONFLICT: 'Someone else changed this invoice. Reload and try again.',
 }
 
