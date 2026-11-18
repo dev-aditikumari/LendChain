@@ -1,6 +1,7 @@
 // The one place that knows the API address and how the token is kept.
-// Set VITE_API_URL to call the API directly instead of through the dev proxy.
-export const BASE: string = import.meta.env.VITE_API_URL ?? '/api'
+// Set VITE_API_URL (for example https://api.example.com) to call the API directly; without it the dev server proxies /api.
+const configured = String(import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
+export const BASE: string = configured || '/api'
 const TOKEN_KEY = 'lendchain.token'
 
 export class ApiError extends Error {
