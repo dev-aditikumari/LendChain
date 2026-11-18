@@ -1,6 +1,6 @@
 // The one place that knows the API address and how the token is kept.
 // Set VITE_API_URL to call the API directly instead of through the dev proxy.
-const BASE: string = import.meta.env.VITE_API_URL ?? '/api'
+export const BASE: string = import.meta.env.VITE_API_URL ?? '/api'
 const TOKEN_KEY = 'lendchain.token'
 
 export class ApiError extends Error {
@@ -64,7 +64,7 @@ export async function http<T = unknown>(path: string, opts: Options = {}): Promi
 const CODE_MESSAGE: Record<string, string> = {
   ROLE_NOT_ALLOWED: 'Your role is not allowed to do this.',
   NOT_YOUR_INVOICE: 'This invoice does not belong to you.',
-  MAKER_CHECKER: 'You created or recommended this record, so someone else has to decide it.',
+  MAKER_CHECKER: 'You created, recommended or requested this, so someone else has to decide it.',
   ABOVE_APPROVAL_LIMIT: 'This amount is above your approval limit and has to be escalated.',
   SEGREGATION_OF_DUTIES: 'You approved this invoice, so you cannot also move its money.',
   DUAL_CONTROL: 'You queued this payout, so a different person has to authorise it.',

@@ -8,6 +8,7 @@ import { move } from "../invoices/service";
 import { post } from "../ledger/repository";
 import { allocateRepayment, repaymentLines } from "../ledger/posting";
 import { releaseLimit } from "../programs/limit";
+import { releaseUnearned } from "../ledger/accruals";
 import { interestFor } from "../../shared/money";
 import { audit } from "../../shared/audit";
 
@@ -57,11 +58,12 @@ repaymentRouter.post("/", async (req, res) => {
       const { allocated, excess } = allocateRepayment(body.amount, dues);
       if (excess > 0) throw badRequest("Amount is more than what is due", "OVERPAYMENT");
       await Repayment.create([{ invoiceId: inv._id, amount: body.amount, utr: body.utr, allocation: allocated, recordedBy: req.actor.id }], { session });
-      await post(`rep-${body.utr}-${Date.now()}`, inv._id, repaymentLines(allocated), "repayment", session);
+      await post(`rep-${body.utr}-${Date.now()}`, inv._id, repaymentLines(allocated), "repayment", session, { reference: body.utr });
       const left = dues.principal - allocated.principal + (dues.penal - allocated.penal);
       if (left === 0) {
         await move(inv, "REPAID", req.actor.id, {}, session);
         await releaseLimit(inv.programId, inv.financedAmount!, session);
+        await releaseUnearned(inv._id, session);
       }
       out = { allocated, invoiceStatus: inv.status };
     });

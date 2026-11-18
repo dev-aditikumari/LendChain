@@ -1,6 +1,11 @@
 export type Account =
   | "LENDER_POOL" | "SUPPLIER_RECEIVABLE" | "BUYER_RECEIVABLE"
-  | "FEE_INCOME" | "INTEREST_INCOME" | "PENAL_INCOME" | "HOLDBACK" | "BANK";
+  | "FEE_INCOME" | "INTEREST_INCOME" | "UNEARNED_INTEREST" | "PENAL_INCOME" | "HOLDBACK" | "BANK";
+
+export const ACCOUNTS: Account[] = [
+  "LENDER_POOL", "BUYER_RECEIVABLE", "SUPPLIER_RECEIVABLE", "UNEARNED_INTEREST",
+  "INTEREST_INCOME", "FEE_INCOME", "PENAL_INCOME", "HOLDBACK", "BANK",
+];
 
 export interface Line {
   account: Account;
@@ -21,7 +26,8 @@ export function assertBalanced(lines: Line[]): void {
   if (d !== c) throw new Error(`Unbalanced entry: debit ${d} credit ${c}`);
 }
 
-// money leaves the pool: buyer owes the full invoice, supplier gets net, fees booked as income
+// money leaves the pool: buyer owes the full invoice, supplier gets net, fees booked as income.
+// Interest taken up front is not earned yet, so it sits in UNEARNED_INTEREST until it is accrued.
 export function disbursementLines(p: { advance: number; fee: number; upfrontInterest: number }): Line[] {
   const net = p.advance - p.fee - p.upfrontInterest;
   const lines: Line[] = [
@@ -29,9 +35,24 @@ export function disbursementLines(p: { advance: number; fee: number; upfrontInte
     { account: "LENDER_POOL", debit: 0, credit: net },
   ];
   if (p.fee) lines.push({ account: "FEE_INCOME", debit: 0, credit: p.fee });
-  if (p.upfrontInterest) lines.push({ account: "INTEREST_INCOME", debit: 0, credit: p.upfrontInterest });
+  if (p.upfrontInterest) lines.push({ account: "UNEARNED_INTEREST", debit: 0, credit: p.upfrontInterest });
   assertBalanced(lines);
   return lines;
+}
+
+// moves earned interest out of the unearned balance
+export function accrualLines(amount: number): Line[] {
+  const lines: Line[] = [
+    { account: "UNEARNED_INTEREST", debit: amount, credit: 0 },
+    { account: "INTEREST_INCOME", debit: 0, credit: amount },
+  ];
+  assertBalanced(lines);
+  return lines;
+}
+
+// interest for day k (0-based) of n days; the parts add up to the total exactly
+export function accrualForDay(total: number, days: number, k: number): number {
+  return Math.round((total * (k + 1)) / days) - Math.round((total * k) / days);
 }
 
 export interface Dues {

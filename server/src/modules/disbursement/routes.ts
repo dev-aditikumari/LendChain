@@ -1,14 +1,16 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
-import { Invoice, Disbursement, IdempotencyKey } from "../../models";
+import { Invoice, Disbursement, IdempotencyKey, Entity } from "../../models";
 import { authenticate, check } from "../../middleware/auth";
-import { badRequest, conflict, notFound } from "../../shared/errors";
+import { badRequest, conflict, notFound, HttpError } from "../../shared/errors";
 import { move } from "../invoices/service";
 import { post } from "../ledger/repository";
 import { disbursementLines } from "../ledger/posting";
 import { interestFor } from "../../shared/money";
 import { RuleEvaluation } from "../../models";
+import { rail, RailFailure } from "./rail";
+import { raise, resolveForInvoice } from "../operations/exceptions";
 import { audit } from "../../shared/audit";
 
 export const disbursementRouter = Router();
@@ -17,24 +19,26 @@ disbursementRouter.use(authenticate);
 // tests set this to make a failure after the ledger is written
 export const hooks: { afterLedger?: () => void } = {};
 
+// puts an approved invoice in the payout queue; the caller has already checked who may do it
+export async function queuePayout(inv: any, initiatedBy: string) {
+  if (inv.status !== "APPROVED") throw badRequest("Invoice is not approved for disbursement");
+  if (await Disbursement.exists({ invoiceId: inv._id, status: { $in: ["PENDING_AUTH", "SUCCESS"] } })) throw conflict("A payout is already queued for this invoice");
+  try {
+    return await Disbursement.create({ invoiceId: inv._id, amount: inv.financedAmount, status: "PENDING_AUTH", initiatedBy });
+  } catch (e: any) {
+    // the unique index on invoiceId decides when two requests race
+    if (e?.code === 11000) throw conflict("A payout is already queued for this invoice");
+    throw e;
+  }
+}
+
 // step one: someone on finance ops queues the payout
 disbursementRouter.post("/", async (req, res) => {
   const { invoiceId } = z.object({ invoiceId: z.string() }).parse(req.body);
   const inv = await Invoice.findById(invoiceId);
   if (!inv) throw notFound("Invoice");
   check(req, "disbursement:initiate", { approvedBy: String(inv.approvedBy) });
-  if (inv.status !== "APPROVED") throw badRequest("Invoice is not approved for disbursement");
-  if (await Disbursement.exists({ invoiceId: inv._id, status: { $in: ["PENDING_AUTH", "SUCCESS"] } })) throw conflict("A payout is already queued for this invoice");
-  let d;
-  try {
-    d = await Disbursement.create({
-      invoiceId: inv._id, amount: inv.financedAmount, status: "PENDING_AUTH", initiatedBy: req.actor.id,
-    });
-  } catch (e: any) {
-    // the unique index on invoiceId decides when two requests race
-    if (e?.code === 11000) throw conflict("A payout is already queued for this invoice");
-    throw e;
-  }
+  const d = await queuePayout(inv, req.actor.id);
   await audit(req, "disbursement.initiate", invoiceId, null, { disbursementId: String(d._id) });
   res.status(201).json({ disbursement: d.toObject() });
 });
@@ -66,6 +70,7 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
   const session = await mongoose.startSession();
   let response: any;
   let invoiceId = "";
+  let queued: any = null;
   try {
     await session.withTransaction(async () => {
       const again = await IdempotencyKey.findOne({ key }).session(session).lean();
@@ -78,6 +83,7 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
       const inv = await Invoice.findById(d.invoiceId).session(session);
       if (!inv) throw notFound("Invoice");
       invoiceId = String(inv._id);
+      queued = d;
       check(req, "disbursement:authorise", { approvedBy: String(inv.approvedBy), initiatedBy: String(d.initiatedBy) });
       if (d.status !== "PENDING_AUTH") throw conflict("Payout was already released", "ALREADY_AUTHORISED");
       if (inv.status !== "APPROVED") throw badRequest("Invoice is not approved for disbursement");
@@ -91,15 +97,21 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
       const net = advance - fee - upfrontInterest;
       if (net <= 0) throw badRequest("Net disbursal is not positive");
 
+      // the transfer is sent before anything is committed; a refusal aborts the transaction
+      const supplier = await Entity.findById(inv.supplierId).session(session).lean();
+      const sent = await rail.send({ disbursementId: String(d._id), amount: net, account: supplier?.bankAccount });
+      if (!sent.ok) throw new RailFailure(sent.reason);
+
       // one conditional update decides who releases the payout
       const claimed = await Disbursement.updateOne(
         { _id: d._id, status: "PENDING_AUTH" },
-        { $set: { amount: advance, fee, upfrontInterest, net, rate: result.rate, status: "SUCCESS", reference: "MOCK-" + Date.now(), authorisedBy: req.actor.id } },
+        { $set: { amount: advance, fee, upfrontInterest, net, rate: result.rate, status: "SUCCESS", reference: sent.reference, authorisedBy: req.actor.id, disbursedOn: new Date(), accrualDays: days } },
         { session },
       );
       if (claimed.modifiedCount !== 1) throw conflict("Payout was already released", "ALREADY_AUTHORISED");
       const released = await Disbursement.findById(d._id).session(session);
-      await post(String(d._id), inv._id, disbursementLines({ advance, fee, upfrontInterest }), "disbursement", session);
+      await post(String(d._id), inv._id, disbursementLines({ advance, fee, upfrontInterest }), "disbursement", session, { reference: sent.reference, disbursementId: d._id });
+      await resolveForInvoice(inv._id, "Paid out on a later attempt", session);
       hooks.afterLedger?.();
       await move(inv, "DISBURSED", req.actor.id, { disbursedAt: new Date() }, session);
       response = { disbursement: released!.toObject(), invoiceStatus: inv.status };
@@ -109,6 +121,15 @@ disbursementRouter.post("/:id/authorise", async (req, res) => {
     // a concurrent request with the same key may have won
     const won = await IdempotencyKey.findOne({ key }).lean();
     if (won && won.scope === scope) return res.json(won.response);
+    if (e instanceof RailFailure && queued) {
+      await Disbursement.updateOne({ _id: queued._id, status: "PENDING_AUTH" }, { $set: { status: "FAILED", failureReason: e.reason, authorisedBy: req.actor.id } });
+      await raise({
+        kind: "PAYOUT_FAILED", severity: "HIGH", title: "Payout failed",
+        detail: `The bank refused the transfer: ${e.reason}.`, invoiceId, disbursementId: queued._id,
+      });
+      await audit(req, "disbursement.failed", invoiceId, null, { reason: e.reason });
+      throw new HttpError(502, `The bank refused the payout: ${e.reason}`, "PAYOUT_FAILED");
+    }
     throw e;
   } finally {
     await session.endSession();

@@ -42,7 +42,7 @@ export function can(actor: Actor, permission: Permission, res: Resource = {}): D
     return deny("SEGREGATION_OF_DUTIES");
   }
   if (permission === "disbursement:authorise" && res.initiatedBy === actor.id) return deny("DUAL_CONTROL");
-  if (permission === "rule:publish" && res.createdBy === actor.id) return deny("MAKER_CHECKER");
+  if ((permission === "rule:publish" || permission === "period:close") && res.createdBy === actor.id) return deny("MAKER_CHECKER");
 
   return { ok: true };
 }

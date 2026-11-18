@@ -95,6 +95,9 @@ export interface Disbursement {
   amount?: number
   net?: number
   status: 'PENDING_AUTH' | 'SUCCESS' | 'FAILED'
+  reference?: string
+  failureReason?: string
+  bankStatus?: 'CONFIRMED' | 'FAILED'
   initiatedBy?: { _id: string; name: string } | null
   authorisedBy?: { _id: string; name: string } | null
   createdAt: string
@@ -165,4 +168,97 @@ export interface BackTest {
   live: Tally
   draft: Tally
   rows: { invoiceId: string; number?: string; amount?: number; before: Outcome; after: Outcome; changed: boolean }[]
+}
+
+export interface LedgerRow {
+  _id: string
+  txId: string
+  invoiceId?: string
+  invoiceNumber?: string
+  account: string
+  debit: number
+  credit: number
+  memo?: string
+  reference?: string
+  postedOn: string
+  reverses?: string
+  reversed: boolean
+}
+
+export interface LedgerPage {
+  items: LedgerRow[]
+  total: number
+  page: number
+  limit: number
+  totals: { debit: number; credit: number; difference: number; unbalanced: number }
+}
+
+export interface TrialBalance {
+  asOf: string | null
+  accounts: { account: string; debit: number; credit: number; balance: number }[]
+  debit: number
+  credit: number
+  difference: number
+  unbalanced: { txId: string; debit: number; credit: number }[]
+}
+
+export interface AccrualList {
+  suggestedDate: string
+  openPayouts: number
+  unearned: number
+  runs: { _id: string; date: string; count: number; amount: number; runByName?: string; source: 'MANUAL' | 'SCHEDULE'; createdAt: string }[]
+}
+
+export interface AccrualResult { date: string; alreadyRun: boolean; count: number; amount: number }
+
+export interface PeriodRow {
+  key: string
+  status: 'OPEN' | 'CLOSE_REQUESTED' | 'CLOSED'
+  ended: boolean
+  entries: number
+  debit: number
+  credit: number
+  requestedBy?: string
+  requestedByName?: string
+  requestedAt?: string
+  closedByName?: string
+  closedAt?: string
+}
+
+export interface ExceptionRow {
+  _id: string
+  kind: 'PAYOUT_FAILED' | 'WEBHOOK_PROBLEM'
+  severity: 'HIGH' | 'MEDIUM' | 'LOW'
+  status: 'OPEN' | 'RESOLVED'
+  title: string
+  detail?: string
+  invoiceId?: string
+  invoiceNumber?: string
+  disbursementId?: string
+  owner?: string
+  ownerName?: string
+  retryDisbursementId?: string
+  resolution?: string
+  resolvedByName?: string
+  resolvedAt?: string
+  createdAt: string
+}
+
+export interface StatementRow {
+  _id: string
+  name: string
+  lineCount: number
+  from: string
+  to: string
+  matched: number
+  unmatched: number
+  uploadedByName?: string
+  createdAt: string
+}
+
+export interface StatementDetail {
+  statement: StatementRow
+  summary: { lines: number; matched: number; unmatched: number; unmatchedLedger: number }
+  lines: { _id: string; date: string; reference?: string; description?: string; amount: number; direction: 'IN' | 'OUT'; status: 'MATCHED' | 'UNMATCHED'; method?: 'REFERENCE' | 'AMOUNT_AND_DATE'; note?: string }[]
+  unmatchedLedger: { txId: string; reference: string; postedOn: string; amount: number; invoiceNumber?: string; memo?: string }[]
 }

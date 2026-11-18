@@ -95,6 +95,12 @@ const disbursementSchema = new Schema({
   rate: Number,
   status: { type: String, enum: ["PENDING_AUTH", "SUCCESS", "FAILED"], default: "PENDING_AUTH" },
   reference: String,
+  failureReason: String,
+  bankStatus: { type: String, enum: ["CONFIRMED", "FAILED"] },
+  disbursedOn: Date,
+  // upfront interest is booked as unearned and recognised evenly over accrualDays
+  accrualDays: Number,
+  accruedInterest: { type: Number, default: 0 },
   initiatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   authorisedBy: { type: Schema.Types.ObjectId, ref: "User" },
 }, opts);
@@ -105,14 +111,94 @@ disbursementSchema.index(
 );
 export const Disbursement = mongoose.model("Disbursement", disbursementSchema);
 
-export const LedgerEntry = mongoose.model("LedgerEntry", new Schema({
+const ledgerSchema = new Schema({
   txId: { type: String, required: true, index: true },
   invoiceId: { type: Schema.Types.ObjectId, index: true },
+  disbursementId: { type: Schema.Types.ObjectId },
   account: { type: String, required: true },
   debit: { type: Number, default: 0 },
   credit: { type: Number, default: 0 },
   memo: String,
-}, { timestamps: { createdAt: true, updatedAt: false } }));
+  // bank reference or UTR on cash entries, used by reconciliation
+  reference: { type: String, index: true },
+  // accounting date; decides which period the entry belongs to
+  postedOn: { type: Date, required: true, default: Date.now, index: true },
+  reverses: String,
+}, { timestamps: { createdAt: true, updatedAt: false } });
+
+// the ledger is append-only: corrections are new reversal entries
+const blocked = () => { throw new Error("Ledger entries cannot be changed or deleted"); };
+ledgerSchema.pre(
+  ["updateOne", "updateMany", "deleteOne", "deleteMany", "findOneAndUpdate", "findOneAndDelete", "findOneAndReplace", "replaceOne"],
+  blocked,
+);
+ledgerSchema.pre("save", function () {
+  if (!this.isNew) blocked();
+});
+export const LedgerEntry = mongoose.model("LedgerEntry", ledgerSchema);
+
+// one row per reversed transaction, so a transaction can only be reversed once
+export const Reversal = mongoose.model("Reversal", new Schema({
+  txId: { type: String, required: true, unique: true },
+  reversalTxId: String,
+  reason: String,
+  by: { type: Schema.Types.ObjectId, ref: "User" },
+}, opts));
+
+export const Period = mongoose.model("Period", new Schema({
+  key: { type: String, required: true, unique: true },
+  status: { type: String, enum: ["CLOSE_REQUESTED", "CLOSED"], required: true },
+  requestedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  requestedAt: Date,
+  closedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  closedAt: Date,
+  snapshot: Schema.Types.Mixed,
+}, opts));
+
+export const AccrualRun = mongoose.model("AccrualRun", new Schema({
+  date: { type: String, required: true, unique: true },
+  count: Number,
+  amount: Number,
+  runBy: { type: Schema.Types.ObjectId, ref: "User" },
+  source: { type: String, enum: ["MANUAL", "SCHEDULE"], default: "MANUAL" },
+}, opts));
+
+export const ExceptionItem = mongoose.model("ExceptionItem", new Schema({
+  kind: { type: String, enum: ["PAYOUT_FAILED", "WEBHOOK_PROBLEM"], required: true },
+  severity: { type: String, enum: ["HIGH", "MEDIUM", "LOW"], default: "MEDIUM" },
+  status: { type: String, enum: ["OPEN", "RESOLVED"], default: "OPEN", index: true },
+  title: { type: String, required: true },
+  detail: String,
+  invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice" },
+  disbursementId: { type: Schema.Types.ObjectId, ref: "Disbursement" },
+  owner: { type: Schema.Types.ObjectId, ref: "User" },
+  retryDisbursementId: { type: Schema.Types.ObjectId, ref: "Disbursement" },
+  resolution: String,
+  resolvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  resolvedAt: Date,
+}, opts));
+
+export const Statement = mongoose.model("Statement", new Schema({
+  name: { type: String, required: true },
+  hash: { type: String, required: true, unique: true },
+  uploadedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  from: Date,
+  to: Date,
+  lineCount: Number,
+}, opts));
+
+export const StatementLine = mongoose.model("StatementLine", new Schema({
+  statementId: { type: Schema.Types.ObjectId, ref: "Statement", index: true, required: true },
+  date: { type: Date, required: true },
+  reference: String,
+  description: String,
+  amount: { type: Number, required: true },
+  direction: { type: String, enum: ["IN", "OUT"], required: true },
+  status: { type: String, enum: ["MATCHED", "UNMATCHED"], required: true },
+  method: { type: String, enum: ["REFERENCE", "AMOUNT_AND_DATE"] },
+  matchedTxId: { type: String, index: true },
+  note: String,
+}, opts));
 
 export const Repayment = mongoose.model("Repayment", new Schema({
   invoiceId: { type: Schema.Types.ObjectId, index: true },

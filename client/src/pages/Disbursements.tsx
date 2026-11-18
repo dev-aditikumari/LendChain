@@ -68,7 +68,16 @@ export default function Disbursements() {
                   { key: 'amount', header: 'Amount', align: 'right', render: (r) => money(r.net ?? r.amount) },
                   { key: 'initiatedBy', header: 'Queued by', render: (r) => r.initiatedBy?.name ?? '-' },
                   { key: 'authorisedBy', header: 'Authorised by', render: (r) => r.authorisedBy?.name ?? '-' },
-                  { key: 'status', header: 'Status', render: (r) => <StatusPill>{STATUS[r.status]}</StatusPill> },
+                  {
+                    key: 'status', header: 'Status',
+                    render: (r) => (
+                      <span>
+                        <StatusPill>{STATUS[r.status]}</StatusPill>
+                        {r.failureReason && <span className="mt-1 block text-xs text-muted">{r.failureReason}</span>}
+                        {r.status === 'SUCCESS' && r.reference && <span className="mt-1 block text-xs text-muted">{r.reference}</span>}
+                      </span>
+                    ),
+                  },
                   {
                     key: 'act', header: 'Action',
                     render: (r) => can('disbursement:authorise') && r.status === 'PENDING_AUTH' && (

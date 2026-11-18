@@ -8,15 +8,28 @@ import { Entity, Program, User } from "../src/models";
 let repl: MongoMemoryReplSet;
 export const app = createApp();
 
+// several test files start a database at the same moment; a start that fails is tried again
 export async function startDb() {
-  repl = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
-  await mongoose.connect(repl.getUri());
-  await mongoose.connection.syncIndexes?.();
+  let last: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      repl = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+      await mongoose.connect(repl.getUri());
+      await mongoose.connection.syncIndexes?.();
+      return;
+    } catch (e) {
+      last = e;
+      await mongoose.disconnect().catch(() => {});
+      await repl?.stop().catch(() => {});
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+  throw last;
 }
 
 export async function stopDb() {
   await mongoose.disconnect();
-  await repl.stop();
+  await repl?.stop();
 }
 
 export async function resetDb() {
@@ -47,6 +60,7 @@ export async function seedWorld(sanctioned = 100000 * 100) {
     finance3: await mk("finance3@t.com", "FINANCE_OPS"),
     ops: await mk("ops@t.com", "OPERATIONS"),
     accounts: await mk("accounts@t.com", "ACCOUNTS"),
+    accounts2: await mk("accounts2@t.com", "ACCOUNTS"),
     risk1: await mk("risk1@t.com", "RISK_ADMIN"),
     risk2: await mk("risk2@t.com", "RISK_ADMIN"),
     admin: await mk("admin@t.com", "ADMIN"),

@@ -10,7 +10,7 @@ export type Permission =
   | "repayment:create" | "repayment:record"
   | "collections:read" | "rule:propose" | "rule:publish" | "program:manage"
   | "entity:verify" | "user:manage" | "audit:read" | "ledger:read"
-  | "reconciliation:read" | "exception:resolve" | "journal:post" | "period:close";
+  | "reconciliation:read" | "reconciliation:upload" | "exception:resolve" | "journal:post" | "period:close";
 
 export const ROLES: Role[] = [
   "SUPPLIER", "BUYER", "ANALYST", "APPROVER", "FINANCE_OPS",
@@ -28,7 +28,7 @@ export const rolePermissions: Record<Role, Permission[]> = {
   ],
   OPERATIONS: [
     "invoice:read", "exception:resolve", "disbursement:read", "ledger:read",
-    "reconciliation:read", "audit:read",
+    "reconciliation:read", "reconciliation:upload", "audit:read",
   ],
   ACCOUNTS: ["ledger:read", "disbursement:read", "reconciliation:read", "journal:post", "period:close"],
   COLLECTIONS: ["invoice:read", "collections:read", "repayment:record", "ledger:read", "audit:read"],

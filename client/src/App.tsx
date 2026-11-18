@@ -24,6 +24,7 @@ import Payables from './pages/Payables'
 import PeriodClose from './pages/PeriodClose'
 import Placeholder from './pages/Placeholder'
 import PortfolioOverview from './pages/PortfolioOverview'
+import PayoutMonitor from './pages/PayoutMonitor'
 import PricingGrid from './pages/PricingGrid'
 import Programs from './pages/Programs'
 import Reconciliation from './pages/Reconciliation'
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/review" element={g('Approvals', <ReviewQueue role="approver" />)} />
         <Route path="/review/:id" element={g('Approvals', <ReviewDetail />)} />
         <Route path="/disbursements" element={g('Disbursement', <Disbursements />)} />
+        <Route path="/payout-monitor" element={g('Disbursement', <PayoutMonitor />)} />
         <Route path="/ledger" element={g('Ledger', <Ledger />)} />
         <Route path="/exceptions" element={g('Exceptions', <Exceptions />)} />
         <Route path="/reconciliation" element={g('Reconciliation', <Reconciliation />)} />
