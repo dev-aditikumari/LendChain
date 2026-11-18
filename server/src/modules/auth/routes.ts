@@ -34,7 +34,8 @@ authRouter.post("/login", async (req, res) => {
   user.failedLogins = 0;
   await user.save();
   const token = signAccess(user);
-  res.cookie("access", token, { httpOnly: true, sameSite: "lax", maxAge: 15 * 60 * 1000 });
+  // the web app sends the token as a Bearer header; the cookie is lax so other sites cannot use it
+  res.cookie("access", token, { httpOnly: true, sameSite: "lax", secure: config.isProduction, maxAge: 15 * 60 * 1000 });
   res.json({
     token,
     user: { id: user._id, name: user.name, email: user.email, role: user.role, entityId: user.entityId },

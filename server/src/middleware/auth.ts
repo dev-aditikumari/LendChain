@@ -35,7 +35,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   next();
 }
 
-export function require(permission: Permission) {
+export function requirePermission(permission: Permission) {
   return (req: Request, _res: Response, next: NextFunction) => {
     const d = can(req.actor, permission);
     if (!d.ok) throw forbidden(d.reason);

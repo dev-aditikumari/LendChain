@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import cron from "node-cron";
 import { createApp } from "./app";
 import { config } from "./config";
-import { seedDemo } from "./seed";
+import { ensureDemoData } from "./bootstrap";
 import { markOverdue } from "./modules/repayments/overdue";
 import { runAccruals, yesterday } from "./modules/ledger/accruals";
 
@@ -16,7 +16,8 @@ async function main() {
     console.log("Using in-memory MongoDB (data is lost on restart)");
   }
   await mongoose.connect(uri);
-  if (process.env.SEED === "1" || !config.mongoUri) await seedDemo(uri);
+  const seeded = await ensureDemoData({ enabled: config.seedOnEmpty, password: config.demoPassword ?? "Demo@1234" });
+  console.log(`demo data: ${seeded}`);
 
   cron.schedule("0 1 * * *", async () => {
     const n = await markOverdue();

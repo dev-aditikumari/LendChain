@@ -6,12 +6,8 @@ import { accrualLines, disbursementLines, repaymentLines } from "./modules/ledge
 import { post } from "./modules/ledger/repository";
 import { interestFor } from "./shared/money";
 
-export async function seedDemo(uri: string) {
-  const password = process.env.DEMO_PASSWORD;
-  if (uri.startsWith("mongodb+srv") && !password) {
-    throw new Error("Refusing to seed a hosted database without DEMO_PASSWORD");
-  }
-  const hash = await bcrypt.hash(password || "Demo@1234", 10);
+export async function seedDemo(password: string) {
+  const hash = await bcrypt.hash(password, 10);
   if (await User.exists({ email: "admin@lendchain.test" })) return;
 
   const suppliers = await Entity.create([
