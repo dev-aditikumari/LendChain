@@ -10,7 +10,6 @@ const PLANNED: Record<string, string> = {
   approved: 'Invoices this approver has approved, with remarks.',
   rejected: 'Invoices this approver has rejected, with reasons.',
   limits: 'Approval limits and program limits, with the amounts that escalate.',
-  'payout-monitor': 'Live status of payouts sent to the bank, including bounces.',
   'master-data': 'Buyers, suppliers and bank accounts that other screens depend on.',
   settlements: 'Settlement files and their match against payouts.',
   'tax-gst': 'GST on fees and the journals that book it.',

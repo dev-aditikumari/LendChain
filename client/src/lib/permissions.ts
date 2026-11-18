@@ -66,12 +66,13 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
   ops: [
     n('Exceptions', '/exceptions', 'Exceptions'),
-    n('Payout monitor', '/p/payout-monitor', 'Disbursement'),
+    n('Payout monitor', '/payout-monitor', 'Disbursement'),
     n('Reconciliation', '/reconciliation', 'Reconciliation'),
     n('Master data', '/p/master-data', 'Invoices'),
   ],
   accounts: [
     n('Trial balance', '/trial-balance', 'Trial balance / close'),
+    n('Ledger', '/ledger', 'Ledger'),
     n('Accruals', '/accruals', 'Trial balance / close'),
     n('Settlements', '/p/settlements', 'Disbursement'),
     n('Period close', '/period-close', 'Trial balance / close'),

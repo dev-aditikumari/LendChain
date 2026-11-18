@@ -19,7 +19,7 @@ const CONTRACT: Record<string, string[]> = {
     "audit:read", "disbursement:authorise", "disbursement:initiate", "disbursement:read",
     "invoice:read", "ledger:read", "reconciliation:read", "repayment:record",
   ],
-  OPERATIONS: ["audit:read", "disbursement:read", "exception:resolve", "invoice:read", "ledger:read", "reconciliation:read"],
+  OPERATIONS: ["audit:read", "disbursement:read", "exception:resolve", "invoice:read", "ledger:read", "reconciliation:read", "reconciliation:upload"],
   ACCOUNTS: ["disbursement:read", "journal:post", "ledger:read", "period:close", "reconciliation:read"],
   COLLECTIONS: ["audit:read", "collections:read", "invoice:read", "ledger:read", "repayment:record"],
   RISK_ADMIN: ["audit:read", "program:manage", "rule:propose", "rule:publish"],

@@ -4,7 +4,6 @@ import { z } from "zod";
 import { Entity, Program, User, AuditLog, Invoice, InvoiceEvent } from "../../models";
 import { authenticate, check, require } from "../../middleware/auth";
 import { badRequest, notFound } from "../../shared/errors";
-import { entries, trialBalance } from "../ledger/repository";
 import { ageing } from "../repayments/overdue";
 import { audit } from "../../shared/audit";
 import { rolePermissions } from "../rbac/permissions";
@@ -93,11 +92,6 @@ adminRouter.get("/programs", async (req, res) => {
     supplierId: p.supplierId?._id,
     buyerId: p.buyerId?._id,
   })));
-});
-
-adminRouter.get("/ledger/entries", async (req, res) => {
-  check(req, "ledger:read", {});
-  res.json({ entries: await entries(), trial: await trialBalance() });
 });
 
 adminRouter.get("/audit-logs", async (req, res) => {
