@@ -13,6 +13,9 @@ const STATS = [
   { value: '0.4%', label: 'overdue rate' },
 ]
 
+// the demo password is public on purpose, so visitors can sign in without hunting for it
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || 'Demo@1234'
+
 // demo accounts from the seed data, used to fill the email field
 const DEMO_EMAIL: Record<Role, string> = {
   supplier: 'supplier@lendchain.test',
@@ -74,13 +77,13 @@ export default function Login() {
           </div>
         </div>
         <div>
-          <p className="m-0 mb-2 text-sm text-white/85">Try a role (fills the email):</p>
+          <p className="m-0 mb-2 text-sm text-white/85">Try a role (fills the email and password):</p>
           <div className="flex flex-wrap gap-2">
             {ROLES.map((r) => (
               <button
                 key={r}
                 type="button"
-                onClick={() => setEmail(DEMO_EMAIL[r])}
+                onClick={() => { setEmail(DEMO_EMAIL[r]); setPassword(DEMO_PASSWORD) }}
                 className="min-h-11 cursor-pointer rounded-full border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
               >
                 {ROLE_LABEL[r]}
@@ -100,7 +103,11 @@ export default function Login() {
           <Field label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           {error && <p role="alert" className="m-0 rounded-[10px] bg-[#FDE2E2] px-3 py-2 text-sm font-semibold text-[#8A1C1C]">{error}</p>}
           <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</Button>
-          <p className="m-0 text-xs text-muted">Demo accounts use the password Demo@1234.</p>
+          <div className="rounded-[10px] border border-[#E3DAF3] bg-white px-3 py-2 text-xs text-muted">
+            <p className="m-0 font-semibold text-ink">Demo logins</p>
+            <p className="m-0 mt-1">Email: <span className="font-mono">supplier@lendchain.test</span> (or pick any role on the left)</p>
+            <p className="m-0">Password: <span className="font-mono">{DEMO_PASSWORD}</span> for every account</p>
+          </div>
         </form>
       </section>
     </div>
