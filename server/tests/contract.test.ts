@@ -21,9 +21,9 @@ const CONTRACT: Record<string, string[]> = {
   ],
   OPERATIONS: ["audit:read", "disbursement:read", "exception:resolve", "invoice:read", "ledger:read", "reconciliation:read", "reconciliation:upload"],
   ACCOUNTS: ["disbursement:read", "journal:post", "ledger:read", "period:close", "reconciliation:read"],
-  COLLECTIONS: ["audit:read", "collections:read", "invoice:read", "ledger:read", "repayment:record"],
-  RISK_ADMIN: ["audit:read", "program:manage", "rule:propose", "rule:publish"],
-  ADMIN: ["audit:read", "disbursement:read", "invoice:read", "ledger:read", "program:manage", "reconciliation:read", "user:manage"],
+  COLLECTIONS: ["audit:read", "collections:read", "collections:write", "invoice:read", "ledger:read", "repayment:record"],
+  RISK_ADMIN: ["audit:read", "portfolio:read", "program:manage", "rule:propose", "rule:publish"],
+  ADMIN: ["audit:read", "disbursement:read", "invoice:read", "ledger:read", "portfolio:read", "program:manage", "reconciliation:read", "user:manage"],
 };
 
 describe("access contract", () => {

@@ -13,6 +13,7 @@ export const User = mongoose.model("User", new Schema({
   failedLogins: { type: Number, default: 0 },
   lockedUntil: Date,
   tokenVersion: { type: Number, default: 0 },
+  notificationsSeenAt: Date,
 }, opts));
 
 export const Entity = mongoose.model("Entity", new Schema({
@@ -25,6 +26,8 @@ export const Entity = mongoose.model("Entity", new Schema({
   vintageMonths: { type: Number, default: 0 },
   kycStatus: { type: String, enum: ["PENDING", "UNDER_REVIEW", "VERIFIED", "REJECTED"], default: "PENDING" },
   kycRemarks: String,
+  contactName: String,
+  contactEmail: String,
 }, opts));
 
 export const Program = mongoose.model("Program", new Schema({
@@ -223,3 +226,17 @@ export const AuditLog = mongoose.model("AuditLog", new Schema({
   ip: String,
   requestId: String,
 }, { timestamps: { createdAt: true, updatedAt: false } }));
+
+export const FollowUp = mongoose.model("FollowUp", new Schema({
+  invoiceId: { type: Schema.Types.ObjectId, ref: "Invoice", required: true, index: true },
+  channel: { type: String, enum: ["CALL", "EMAIL", "VISIT", "NOTE"], required: true },
+  note: { type: String, required: true },
+  // a promise to pay, if the buyer gave one
+  promisedOn: Date,
+  promisedAmount: Number,
+  // when to look at this invoice again; open until someone marks it done
+  nextOn: Date,
+  status: { type: String, enum: ["OPEN", "DONE"], default: "OPEN", index: true },
+  by: { type: Schema.Types.ObjectId, ref: "User" },
+  doneAt: Date,
+}, opts));

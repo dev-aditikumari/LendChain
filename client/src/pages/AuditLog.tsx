@@ -15,15 +15,27 @@ interface AuditEntry {
   after?: unknown
 }
 
-const load = () => http<AuditEntry[]>('/audit-logs')
+const AREAS = [
+  ['', 'All actions'], ['invoice', 'Invoices'], ['disbursement', 'Disbursements'], ['repayment', 'Repayments'], ['rule', 'Rule sets'],
+  ['ledger', 'Ledger'], ['period', 'Period close'], ['followup', 'Follow-ups'], ['user', 'Users'], ['entity', 'Companies'],
+] as const
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export default function AuditLog() {
-  const { data, error, loading } = useRequest(load)
+  const [area, setArea] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [user, setUser] = useState('')
   const [q, setQ] = useState('')
+  const query = new URLSearchParams({
+    ...(area && { action: area }),
+    ...(from && { from: new Date(from).toISOString() }),
+    ...(to && { to: new Date(`${to}T23:59:59.999`).toISOString() }),
+    limit: '500',
+  }).toString()
+  const { data, error, loading } = useRequest(() => http<AuditEntry[]>(`/audit-logs?${query}`), query)
 
   const rows = useMemo(
     () =>
@@ -49,7 +61,12 @@ export default function AuditLog() {
       {!error && (
         <>
           <Card title="Filters">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <SelectField label="Area" value={area} onChange={(e) => setArea(e.target.value)}>
+                {AREAS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </SelectField>
+              <Field label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <Field label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
               <SelectField label="User" value={user} onChange={(e) => setUser(e.target.value)}>
                 <option value="">All users</option>
                 {users.map((u) => <option key={u}>{u}</option>)}
@@ -58,7 +75,7 @@ export default function AuditLog() {
             </div>
           </Card>
           <DataTable
-            title="Events"
+            title={`Events (${shown.length})`}
             columns={[
               { key: 'time', header: 'Time' },
               { key: 'user', header: 'User' },

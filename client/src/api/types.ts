@@ -112,6 +112,7 @@ export interface Notification {
   to: string
   by: string
   note?: string
+  unread?: boolean
 }
 
 export interface InvoicePage {
@@ -261,4 +262,67 @@ export interface StatementDetail {
   summary: { lines: number; matched: number; unmatched: number; unmatchedLedger: number }
   lines: { _id: string; date: string; reference?: string; description?: string; amount: number; direction: 'IN' | 'OUT'; status: 'MATCHED' | 'UNMATCHED'; method?: 'REFERENCE' | 'AMOUNT_AND_DATE'; note?: string }[]
   unmatchedLedger: { txId: string; reference: string; postedOn: string; amount: number; invoiceNumber?: string; memo?: string }[]
+}
+
+export type AgeBucket = '0-30' | '31-60' | '61-90' | '90+'
+
+export interface OverdueRow {
+  id: string
+  number: string
+  buyer: string
+  contact: string | null
+  contactEmail: string | null
+  amount: number
+  dueDate: string
+  daysOverdue: number
+  bucket: AgeBucket
+  lastFollowUp: string | null
+  openFollowUps: number
+}
+
+export interface Ageing {
+  buckets: Record<AgeBucket, { amount: number; count: number }>
+  rows: OverdueRow[]
+}
+
+export interface FollowUpRow {
+  id: string
+  invoiceId: string
+  number?: string
+  channel: 'CALL' | 'EMAIL' | 'VISIT' | 'NOTE'
+  note: string
+  promisedOn?: string
+  promisedAmount?: number
+  nextOn?: string
+  status: 'OPEN' | 'DONE'
+  by: string
+  createdAt: string
+  doneAt?: string
+}
+
+export interface UserRow {
+  id: string
+  email: string
+  name: string
+  role: string
+  entityId?: string
+  entityName?: string
+  approvalLimit?: number
+  active: boolean
+  locked: boolean
+  createdAt: string
+}
+
+export interface Overview {
+  outstanding: number
+  outstandingInvoices: number
+  suppliers: number
+  disbursedThisMonth: number
+  disbursedThisMonthCount: number
+  overdueRate: number
+  averageYield: number
+  months: { label: string; paise: number }[]
+  statusMix: { label: string; value: number; color: string }[]
+  topPrograms: { id: string; buyer: string; supplier: string; sanctioned: number; used: number }[]
+  funnel: { label: string; value: number }[]
 }

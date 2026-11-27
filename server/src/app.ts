@@ -16,6 +16,8 @@ import { ruleSetRouter } from "./modules/rules-engine/routes";
 import { ledgerRouter } from "./modules/ledger/routes";
 import { operationsRouter } from "./modules/operations/routes";
 import { webhookRouter } from "./modules/operations/webhooks";
+import { collectionsRouter } from "./modules/collections/routes";
+import { portfolioRouter } from "./modules/portfolio/routes";
 import { adminRouter } from "./modules/admin/routes";
 
 export interface AppOptions {
@@ -81,6 +83,8 @@ export function createApp(options: AppOptions = {}) {
   app.use("/rule-sets", ruleSetRouter);
   app.use("/ledger", ledgerRouter);
   app.use("/", operationsRouter);
+  app.use("/", collectionsRouter);
+  app.use("/", portfolioRouter);
   app.use("/", adminRouter);
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

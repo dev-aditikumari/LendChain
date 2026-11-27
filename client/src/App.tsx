@@ -22,6 +22,8 @@ import Notifications from './pages/Notifications'
 import Onboarding from './pages/Onboarding'
 import Payables from './pages/Payables'
 import PeriodClose from './pages/PeriodClose'
+import FollowUps from './pages/FollowUps'
+import Overdue from './pages/Overdue'
 import Placeholder from './pages/Placeholder'
 import PortfolioOverview from './pages/PortfolioOverview'
 import PayoutMonitor from './pages/PayoutMonitor'
@@ -78,6 +80,8 @@ export default function App() {
         <Route path="/trial-balance" element={g('Trial balance / close', <TrialBalance />)} />
         <Route path="/accruals" element={g('Trial balance / close', <Accruals />)} />
         <Route path="/period-close" element={g('Trial balance / close', <PeriodClose />)} />
+        <Route path="/follow-ups" element={g('Collections', <FollowUps />)} />
+        <Route path="/overdue" element={g('Collections', <Overdue />)} />
         <Route path="/ageing" element={g('Collections', <Ageing />)} />
         <Route path="/rules" element={g('Rule engine', <RuleEditor />)} />
         <Route path="/rules/:id" element={g('Rule engine', <RuleSetDetail />)} />

@@ -80,8 +80,8 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
   collections: [
     n('Ageing', '/ageing', 'Collections'),
-    n('Follow-ups', '/p/follow-ups', 'Collections'),
-    n('Overdue', '/p/overdue', 'Collections'),
+    n('Follow-ups', '/follow-ups', 'Collections'),
+    n('Overdue', '/overdue', 'Collections'),
   ],
   risk: [
     n('Rule sets', '/rules', 'Rule engine'),

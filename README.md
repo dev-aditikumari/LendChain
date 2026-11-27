@@ -4,6 +4,55 @@ Supply chain finance platform. A supplier raises an invoice against a large buye
 
 Stack: Node.js, Express 5, TypeScript, MongoDB (Mongoose), React with Vite.
 
+## LendChain explained simply
+
+Imagine you bake cookies and sell them to a big shop. The shop says, "We will pay you in two months." But you need money today to buy more flour.
+
+LendChain is the helper that fixes this.
+
+1. **You write a bill.** It says, "The shop owes me 100 coins for cookies." That bill is called an invoice.
+2. **The shop says yes.** It checks the bill and says, "Yes, we owe that."
+3. **The helper does the sums.** A set of rules works out how risky it is and how much to charge. Charging a little is how the helper earns.
+4. **A grown-up says okay.** One person checks the numbers and a second person says the final yes. Two people have to agree, so nobody can cheat alone.
+5. **You get your coins today.** Almost all of them, minus a small fee. Two people are needed here as well: one asks for the money to be sent and another sends it.
+6. **The shop pays back later.** When the two months are over, the shop pays the helper.
+7. **If the shop is late,** a person called a collector phones them, writes down what was said, and checks again later.
+
+Everything that happens is written in a notebook that nobody can rub out, and there is a diary of who did what and when. If someone makes a mistake, a new line is added to fix it. The old line stays.
+
+### Who can do what
+
+There are ten kinds of people, and each one can only press their own buttons.
+
+| Person | What they do, in one line |
+|---|---|
+| Supplier | Writes the bill and asks for money early |
+| Buyer | Says "yes, we owe it" and pays at the end |
+| Analyst | Checks the bill and gives advice |
+| Approver | Says the final yes or no |
+| Finance Ops | Sends the money (one asks, a different one sends) |
+| Operations | Fixes things that go wrong, like a refused payment |
+| Accounts | Keeps the money notebook tidy and closes each month |
+| Collections | Chases late payments |
+| Risk Admin | Writes the rules that decide the price |
+| Admin | Adds people and decides who can do what |
+
+### Try it in one minute
+
+1. Open the website. The sign-in page lists every demo login. Click a role and the email and password fill in by themselves.
+2. Press **Sign in**.
+3. Try **Collections** to see late bills, or **Admin** to see the whole picture and the list of people.
+
+The password for every demo account is shown on the sign-in page. There is no real money in this project. The bank is pretend.
+
+### Words you might hear
+
+- **Invoice:** a bill.
+- **Ledger:** the notebook where every coin move is written down. Nothing can be rubbed out.
+- **Ageing:** sorting late bills by how late they are.
+- **Dual control:** two different people must agree before money moves.
+- **Audit log:** the diary of who did what.
+
 ## Screenshots
 
 Taken from the running app with the demo data. Each screen is shown for the role that uses it.
@@ -47,6 +96,13 @@ Taken from the running app with the demo data. Each screen is shown for the role
 ![Exceptions](docs/screenshots/19-exceptions.jpg)
 ![Reconciliation](docs/screenshots/20-reconciliation.jpg)
 ![Payout monitor](docs/screenshots/21-payout-monitor.jpg)
+
+**Collections and admin.** Overdue invoices are grouped by how late they are, and collectors log calls, emails and promises to pay. Admins manage users, and the overview is built from the real book.
+
+![Ageing](docs/screenshots/22-ageing.jpg)
+![Follow-ups](docs/screenshots/23-follow-ups.jpg)
+![Portfolio overview](docs/screenshots/24-portfolio-overview.jpg)
+![Users and roles](docs/screenshots/25-users-and-roles.jpg)
 
 **Audit log and access map.**
 
@@ -133,6 +189,7 @@ Client:
 | Variable | Value |
 |---|---|
 | `VITE_API_URL` | the API's address, for example `https://lendchain-api.onrender.com`, with no trailing slash. It is read when the client is built, so change it and redeploy |
+| `VITE_DEMO_PASSWORD` | the demo password to show on the sign-in page, so visitors can log in without asking. Set it to the same value as `DEMO_PASSWORD` on the API. Left empty it shows `Demo@1234` |
 
 ### 1. MongoDB Atlas
 
@@ -162,7 +219,7 @@ On first start with an empty database the API loads the demo users and data and 
 | Root / base directory | `client` | `client` |
 | Build command | `npm run build` | `npm run build` (from `netlify.toml`) |
 | Output directory | `dist` | `dist` (from `netlify.toml`) |
-| Environment | `VITE_API_URL` | `VITE_API_URL` |
+| Environment | `VITE_API_URL`, `VITE_DEMO_PASSWORD` | `VITE_API_URL`, `VITE_DEMO_PASSWORD` |
 
 `client/vercel.json` and `client/netlify.toml` send every path to `index.html`, so a page can be opened or refreshed on any route. If `VITE_API_URL` is missing the build prints a warning, because the app would then call `/api` on its own address.
 
@@ -170,7 +227,7 @@ On first start with an empty database the API loads the demo users and data and 
 
 The two sides need each other's address, so go in this order: Atlas, then the API (set `CLIENT_URL` to the address you expect for the client), then the client with `VITE_API_URL` set to the API's address. If the client's address turned out different, correct `CLIENT_URL` on the API and redeploy it. The API answers browsers only from the origins in `CLIENT_URL`.
 
-Check it: `https://<api>/health` should return `{"ok":true,"db":"up",...}`, and the demo logins work on the client with `DEMO_PASSWORD`.
+Check it: `https://<api>/health` should return `{"ok":true,"db":"up",...}`, and the demo logins work on the client with `DEMO_PASSWORD`. The sign-in page shows the logins and the password, and a GitHub link sits in the corner of every page.
 
 ### Resetting the demo
 
@@ -215,6 +272,10 @@ npm run e2e
 - Payouts go through a mock bank that refuses accounts ending in `0000` (the seeded Rao Textiles account is one, so a failed payout can be shown). A refusal marks the payout failed, leaves the invoice approved, and creates an exception. Retrying queues a new payout that a different person still has to authorise.
 - The bank webhook (`POST /webhooks/bank`) checks an HMAC signature over the raw body with `BANK_WEBHOOK_SECRET`. A bad signature, an unreadable body or an unknown payout reference becomes an exception instead of being trusted.
 - Reconciliation takes a CSV (`date,reference,description,debit,credit`). A line matches a ledger cash entry by reference and amount, or by amount and date when there is a single candidate, and no entry is matched twice. A demo statement with a few deliberate differences can be generated from the ledger.
+- An invoice becomes overdue when its due date passes. Ageing buckets are 0-30, 31-60, 61-90 and 90+ days past due, worked out from the due date each time the screen loads. A follow-up is a call, email, visit or note on an overdue invoice, with an optional promise to pay and a date to look again; it stays open until someone marks it done.
+- Notifications are the invoice events a person is allowed to see. The bell counts events by other people since the person last opened the page.
+- Changing a user's role, deactivating them or resetting their password also ends their current sessions. Nobody can change their own role or deactivate themselves.
+- The portfolio overview (outstanding, disbursed this month, overdue rate, yield, six-month chart, status mix, largest programs and funnel) is calculated from invoices, payouts and programs when the page loads.
 - The rule engine is a pure module. Rules live in the database as JSON and are versioned; every evaluation stores the rule set version, the facts and the full trace.
 - Program limits are reserved with a single conditional update so parallel requests cannot go over the limit.
 - Disbursement, ledger posting and the status change run in one MongoDB transaction.

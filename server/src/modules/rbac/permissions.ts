@@ -8,7 +8,7 @@ export type Permission =
   | "financing:request" | "credit:review" | "invoice:approve"
   | "disbursement:initiate" | "disbursement:authorise" | "disbursement:read"
   | "repayment:create" | "repayment:record"
-  | "collections:read" | "rule:propose" | "rule:publish" | "program:manage"
+  | "collections:read" | "collections:write" | "portfolio:read" | "rule:propose" | "rule:publish" | "program:manage"
   | "entity:verify" | "user:manage" | "audit:read" | "ledger:read"
   | "reconciliation:read" | "reconciliation:upload" | "exception:resolve" | "journal:post" | "period:close";
 
@@ -31,10 +31,10 @@ export const rolePermissions: Record<Role, Permission[]> = {
     "reconciliation:read", "reconciliation:upload", "audit:read",
   ],
   ACCOUNTS: ["ledger:read", "disbursement:read", "reconciliation:read", "journal:post", "period:close"],
-  COLLECTIONS: ["invoice:read", "collections:read", "repayment:record", "ledger:read", "audit:read"],
-  RISK_ADMIN: ["rule:propose", "rule:publish", "program:manage", "audit:read"],
+  COLLECTIONS: ["invoice:read", "collections:read", "collections:write", "repayment:record", "ledger:read", "audit:read"],
+  RISK_ADMIN: ["rule:propose", "rule:publish", "program:manage", "audit:read", "portfolio:read"],
   ADMIN: [
     "user:manage", "audit:read", "ledger:read", "program:manage", "invoice:read",
-    "disbursement:read", "reconciliation:read",
+    "disbursement:read", "reconciliation:read", "portfolio:read",
   ],
 };
