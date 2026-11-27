@@ -2,9 +2,11 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import Logo from '../components/Logo'
 import { ROLE_LABEL, navFor } from '../lib/permissions'
+import { useUnreadCount } from '../lib/unread'
 
 export default function AppShell() {
-  const { user, signOut, section } = useAuth()
+  const { user, signOut, section, can } = useAuth()
+  const unread = useUnreadCount(!!user && can('invoice:read'))
   if (!user) return null
   const items = navFor(user.role, section)
   const role = ROLE_LABEL[user.role]
@@ -72,15 +74,20 @@ export default function AppShell() {
             />
           </div>
           <span className="rounded-full bg-violet-tint px-3.5 py-2 text-sm font-semibold text-[#4B2FBF]">Viewing as {role}</span>
-          <button
-            aria-label="Notifications, 1 unread"
+          {can('invoice:read') && <NavLink
+            to="/notifications"
+            aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
             className="relative grid size-11 cursor-pointer place-items-center rounded-full border border-line bg-white/90"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#1B1340" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 7H4c0-1 2-2 2-7z" /><path d="M10 20a2 2 0 0 0 4 0" />
             </svg>
-            <span aria-hidden="true" className="absolute right-2.5 top-2.5 size-2.5 rounded-full border-2 border-white bg-sun" />
-          </button>
+            {unread > 0 && (
+              <span aria-hidden="true" className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full border-2 border-white bg-sun px-1 text-[11px] font-extrabold leading-4 text-ink">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
+          </NavLink>}
         </div>
         <main className="grid gap-4 px-4 py-[22px] sm:px-8">
           <Outlet />

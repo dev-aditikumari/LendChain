@@ -123,7 +123,7 @@ describe("running API", () => {
 
       expect(await ensureDemoData(opts)).toBe("seeded");
       expect(await User.countDocuments()).toBe(14);
-      expect(await Invoice.countDocuments()).toBe(2);
+      expect(await Invoice.countDocuments()).toBe(11);
       expect(await LedgerEntry.countDocuments()).toBeGreaterThan(0);
 
       expect(await ensureDemoData(opts)).toBe("users-exist");
@@ -134,7 +134,7 @@ describe("running API", () => {
       const results = await Promise.all([ensureDemoData(opts), ensureDemoData(opts)]);
       expect(results.filter((r) => r === "seeded")).toHaveLength(1);
       expect(await User.countDocuments()).toBe(14);
-      expect(await Entity.countDocuments()).toBe(3);
+      expect(await Entity.countDocuments()).toBe(6);
     });
 
     it("uses the password it was given", async () => {
@@ -153,7 +153,7 @@ describe("running API", () => {
       expect(r.cleared).toBeGreaterThan(0);
       expect(await Entity.countDocuments({ legalName: "Added Later" })).toBe(0);
       expect(await User.countDocuments()).toBe(14);
-      expect(await Invoice.countDocuments()).toBe(2);
+      expect(await Invoice.countDocuments()).toBe(11);
       const ok = await request(createApp()).post("/auth/login").send({ email: "admin@lendchain.test", password: "Demo-Pass-2" });
       expect(ok.status).toBe(200);
       expect(await ensureDemoData(opts)).toBe("users-exist");

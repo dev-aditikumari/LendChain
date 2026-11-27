@@ -76,8 +76,9 @@ async function main() {
   for (const n of names) t[n] = await login(n);
 
   const programs = await call(t.supplier, "GET", "/programs");
-  const buyerId = programs.body[0].buyerId as string;
-  expect("supplier sees their program", programs.body.length === 1 && programs.body[0].buyerName !== undefined);
+  const tata = programs.body.find((p: any) => p.buyerName === "Tata Motors Ltd");
+  const buyerId = tata.buyerId as string;
+  expect("supplier sees their programs", programs.body.length > 0 && programs.body.every((p: any) => p.buyerName !== undefined));
 
   // normal invoice, draft to repaid
   const id = await toDisbursed(t, buyerId, "E2E-1", new Date(Date.now() - DAY), new Date(Date.now() + 45 * DAY));
@@ -93,7 +94,7 @@ async function main() {
   const detail = await call(t.supplier, "GET", `/invoices/${id2}`);
   expect("invoice is OVERDUE", detail.body.invoice.status === "OVERDUE");
   const ageing = await call(t.collections, "GET", "/collections/ageing");
-  expect("collections sees it in the 0-30 bucket", ageing.body["0-30"] > 0, JSON.stringify(ageing.body));
+  expect("collections sees it in the 0-30 bucket", ageing.body.rows.some((r: any) => r.number === "E2E-2" && r.bucket === "0-30"), JSON.stringify(ageing.body.buckets));
   const dues2 = await call(t.buyer, "GET", `/repayments/dues/${id2}`);
   const rep2 = await call(t.buyer, "POST", "/repayments", { invoiceId: id2, amount: dues2.body.principal + dues2.body.penal, utr: "UTR-E2E-0002" });
   expect("buyer repays principal and penal, invoice is REPAID", rep2.status === 201 && rep2.body.invoiceStatus === "REPAID", JSON.stringify(rep2.body));

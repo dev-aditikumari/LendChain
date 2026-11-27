@@ -1,7 +1,7 @@
 export interface Bar { label: string; value: number }
 
 export default function BarChart({ data, unit = '' , ariaLabel }: { data: Bar[]; unit?: string; ariaLabel: string }) {
-  const max = Math.max(...data.map((d) => d.value))
+  const max = Math.max(...data.map((d) => d.value)) || 1
   const W = 480, H = 220, pad = { t: 24, b: 28, l: 8, r: 8 }
   const slot = (W - pad.l - pad.r) / data.length
   const bw = Math.min(44, slot * 0.6)
