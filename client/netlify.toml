@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# the app uses client-side routes, so every path serves index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

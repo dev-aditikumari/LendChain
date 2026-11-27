@@ -66,7 +66,7 @@ async function main() {
   const repl = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const uri = repl.getUri();
   await mongoose.connect(uri);
-  await seedDemo(uri);
+  await seedDemo("Demo@1234");
   const server = http.createServer(createApp());
   await new Promise<void>((r) => server.listen(0, r));
   base = `http://localhost:${(server.address() as any).port}`;

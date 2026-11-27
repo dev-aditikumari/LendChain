@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { Entity, Program, User, AuditLog, Invoice, InvoiceEvent } from "../../models";
-import { authenticate, check, require } from "../../middleware/auth";
+import { authenticate, check } from "../../middleware/auth";
 import { badRequest, notFound } from "../../shared/errors";
 import { ageing } from "../repayments/overdue";
 import { audit } from "../../shared/audit";

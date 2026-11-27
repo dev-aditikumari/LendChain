@@ -5,7 +5,9 @@
   "scripts": {
     "test": "vitest run",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json && node scripts/mark-commonjs.cjs",
+    "start": "node dist/index.js",
+    "reset-demo": "tsx scripts/reset-demo.ts",
     "e2e": "tsx scripts/e2e.ts"
   },
   "keywords": [],
@@ -42,5 +44,8 @@
     "typescript": "^7.0.2",
     "vitest": "^4.1.12"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  }
 }

@@ -3,6 +3,7 @@ import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import { ZodError } from "zod";
 import { config } from "./config";
 import { HttpError } from "./shared/errors";
@@ -17,17 +18,61 @@ import { operationsRouter } from "./modules/operations/routes";
 import { webhookRouter } from "./modules/operations/webhooks";
 import { adminRouter } from "./modules/admin/routes";
 
-export function createApp() {
+export interface AppOptions {
+  // browsers may call the API from these origins only
+  clientOrigins?: string[];
+  // rate limits are off in tests unless asked for
+  rateLimits?: boolean;
+  loginAttempts?: number;
+}
+
+export function createApp(options: AppOptions = {}) {
+  const origins = options.clientOrigins ?? config.clientOrigins;
+  const limits = options.rateLimits ?? process.env.NODE_ENV !== "test";
   const app = express();
+  app.set("trust proxy", config.trustProxy);
   app.use(helmet());
-  app.use(cors({ origin: config.clientUrl.split(","), credentials: true }));
+  app.use(
+    cors({
+      origin: origins,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Authorization", "Content-Type", "Idempotency-Key", "X-Request-Id"],
+      maxAge: 600,
+    }),
+  );
   // the bank webhook reads its own raw body, so it is mounted before the JSON parser
   app.use("/webhooks", webhookRouter);
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
-  if (process.env.NODE_ENV !== "test") app.use(rateLimit({ windowMs: 60000, limit: 300 }));
+  if (limits) app.use(rateLimit({ windowMs: 60000, limit: 300 }));
 
-  app.get("/health", (_req, res) => res.json({ ok: true }));
+  // failed logins only: a correct password does not count against the person
+  if (limits) {
+    app.use(
+      "/auth/login",
+      rateLimit({
+        windowMs: 15 * 60 * 1000,
+        limit: options.loginAttempts ?? 10,
+        skipSuccessfulRequests: true,
+        standardHeaders: "draft-7",
+        legacyHeaders: false,
+        message: { error: "Too many sign-in attempts. Try again in 15 minutes.", code: "TOO_MANY_ATTEMPTS" },
+      }),
+    );
+  }
+
+  // for the host's health check: 200 when the API can reach its database, 503 when it cannot
+  app.get("/health", async (_req, res) => {
+    let db = false;
+    try {
+      await mongoose.connection.db?.admin().ping();
+      db = mongoose.connection.readyState === 1;
+    } catch {
+      db = false;
+    }
+    res.status(db ? 200 : 503).json({ ok: db, db: db ? "up" : "down", uptime: Math.round(process.uptime()) });
+  });
   app.use("/auth", authRouter);
   app.use("/invoices", invoiceRouter);
   app.use("/approvals", creditRouter);

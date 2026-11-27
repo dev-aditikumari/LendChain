@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Invoice, Program, Entity, RuleEvaluation, InvoiceEvent } from "../../models";
-import { authenticate, check, require } from "../../middleware/auth";
+import { authenticate, check, requirePermission } from "../../middleware/auth";
 import { invoiceScope } from "../rbac/policy";
 import { badRequest, conflict, notFound } from "../../shared/errors";
 import { move } from "./service";
@@ -40,7 +40,7 @@ async function load(req: any, permission: any) {
   return inv;
 }
 
-invoiceRouter.post("/", require("invoice:create"), async (req, res) => {
+invoiceRouter.post("/", requirePermission("invoice:create"), async (req, res) => {
   const body = createBody.parse(req.body);
   if (body.dueDate <= body.issueDate) throw badRequest("Due date must be after issue date");
   const supplierId = req.actor.entityId;
@@ -53,7 +53,7 @@ invoiceRouter.post("/", require("invoice:create"), async (req, res) => {
   res.status(201).json(inv);
 });
 
-invoiceRouter.get("/", require("invoice:read"), async (req, res) => {
+invoiceRouter.get("/", requirePermission("invoice:read"), async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 20, 100);
   const filter: Record<string, unknown> = { ...invoiceScope(req.actor) };
   if (req.query.status) filter.status = req.query.status;
